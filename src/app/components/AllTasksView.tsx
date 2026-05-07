@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { CustomDatePicker } from './CustomDatePicker';
 
 interface Project {
   id: string;
@@ -154,7 +155,21 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
                     ) : null}
                   </td>
                   <td className="py-2 px-4 border-r border-gray-800/50 text-gray-300">
-                    {task.due}
+                    <CustomDatePicker 
+                      trigger={
+                        <button type="button" className="text-gray-300 hover:text-white hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors w-full text-left">
+                          {task.due || 'Trống'}
+                        </button>
+                      }
+                      onSelect={(date) => {
+                        if (date) {
+                          const formattedDate = `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
+                          onUpdateTask(task.id, { due: formattedDate });
+                        } else {
+                          onUpdateTask(task.id, { due: '' });
+                        }
+                      }}
+                    />
                   </td>
                   <td className="py-2 px-4 border-r border-gray-800/50">
                     {getPriorityBadge(task.priority)}
@@ -217,7 +232,10 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
           </div>
           
           <div className="flex items-center">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white h-8 rounded-r-none px-3 text-sm">
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white h-8 rounded-r-none px-3 text-sm"
+              onClick={() => onCreateTask(projects[0]?.id || '', 'Not Started')}
+            >
               Mới
             </Button>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white h-8 rounded-l-none border-l border-blue-700 px-2">

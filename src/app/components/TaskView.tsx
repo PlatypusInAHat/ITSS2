@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
 import { Plus, Target, Users, Calendar, ChevronDown, MessageSquare, LayoutGrid, List, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, Check, Maximize2, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { CustomDatePicker } from './CustomDatePicker';
 
 interface Task {
   id: string;
   title: string;
   status: 'Not Started' | 'In Progress' | 'Done';
   projectId: string;
+  assignee?: string;
+  due?: string;
+  priority?: string;
+  summary?: string;
+  icon?: string;
 }
 
 interface Project {
@@ -99,8 +105,20 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
               <Calendar className="w-4 h-4" />
               <span>Dates</span>
             </div>
-            <div className="text-gray-400">
-              {project.dates || 'Trống'}
+            <div>
+              <CustomDatePicker 
+                trigger={
+                  <button className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors">
+                    {project.dates || 'Trống'}
+                  </button>
+                }
+                onSelect={(date) => {
+                  if (date && onUpdateProject) {
+                    const formattedDate = `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
+                    onUpdateProject(project.id, { dates: formattedDate });
+                  }
+                }}
+              />
             </div>
           </div>
 
@@ -221,12 +239,26 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
                     {statusTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="bg-[#1a1a1a] rounded-lg p-3 text-sm hover:bg-[#252525] shadow-sm border border-gray-800/50 focus-within:ring-1 focus-within:ring-gray-600 transition-shadow"
+                        className="bg-[#1a1a1a] rounded-lg p-3 text-sm hover:bg-[#252525] shadow-sm border border-gray-800/50 focus-within:ring-1 focus-within:ring-gray-600 transition-shadow space-y-2"
                       >
                         <input
                           value={task.title}
                           onChange={(e) => onUpdateTask?.(task.id, { title: e.target.value })}
-                          className="bg-transparent border-none outline-none w-full text-white cursor-text"
+                          className="bg-transparent border-none outline-none w-full text-white cursor-text font-medium"
+                        />
+                        <CustomDatePicker 
+                          trigger={
+                            <button className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
+                              <Calendar className="w-3 h-3" />
+                              {task.due || 'Thêm ngày'}
+                            </button>
+                          }
+                          onSelect={(date) => {
+                            if (date && onUpdateTask) {
+                              const formattedDate = `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
+                              onUpdateTask(task.id, { due: formattedDate });
+                            }
+                          }}
                         />
                       </div>
                     ))}
