@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   CheckSquare, Target, LayoutGrid, List, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, 
-  ChevronDown, Plus, Users, Calendar, AlignLeft, Cloud, FileText, ChevronRight
+  ChevronDown, Plus, Users, Calendar, AlignLeft, Cloud, FileText, ChevronRight, Trash2
 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -30,9 +30,11 @@ interface AllTasksViewProps {
   tasks: Task[];
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
   onCreateTask: (projectId: string, status: string) => void;
+  onDeleteTask?: (taskId: string) => void;
+  onSelectProject?: (projectId: string) => void;
 }
 
-export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: AllTasksViewProps) {
+export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask, onDeleteTask, onSelectProject }: AllTasksViewProps) {
   const [activeTab, setActiveTab] = useState<'By project' | 'Board' | 'All tasks'>('Board');
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>(
     projects.reduce((acc, p) => ({ ...acc, [p.id]: true }), {})
@@ -136,13 +138,26 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
               {projectTasks.map((task) => (
                 <tr key={task.id} className="border-b border-gray-800/50 hover:bg-[#222] group">
                   <td className="py-2 pl-8 pr-4 border-r border-gray-800/50">
-                    <div className="flex items-center gap-2">
-                      {getTaskIcon(task.icon)}
-                      <input
-                        value={task.title}
-                        onChange={(e) => onUpdateTask(task.id, { title: e.target.value })}
-                        className="bg-transparent border-none outline-none text-white w-full font-medium"
-                      />
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        {getTaskIcon(task.icon)}
+                        <input
+                          value={task.title}
+                          onChange={(e) => onUpdateTask(task.id, { title: e.target.value })}
+                          className="bg-transparent border-none outline-none text-white w-full font-medium"
+                        />
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-gray-500 hover:text-red-400 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteTask?.(task.id);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </td>
                   <td className="py-2 px-4 border-r border-gray-800/50">
@@ -293,6 +308,7 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
                     <div 
                       key={task.id} 
                       className="bg-[#222222] rounded-xl border border-gray-800/80 p-4 cursor-pointer hover:border-gray-600 transition-all shadow-sm hover:shadow-md group"
+                      onClick={() => onSelectProject?.(task.projectId)}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-start gap-3">
@@ -300,6 +316,7 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
                           <h3 className="font-medium text-[15px] leading-snug text-gray-100">{task.title}</h3>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="text-gray-500 hover:text-white p-1 rounded hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); onDeleteTask?.(task.id); }}><Trash2 className="w-3.5 h-3.5 text-red-500/70" /></button>
                           <button className="text-gray-500 hover:text-white p-1 rounded hover:bg-gray-700"><AlignLeft className="w-3.5 h-3.5" /></button>
                           <button className="text-gray-500 hover:text-white p-1 rounded hover:bg-gray-700">...</button>
                         </div>

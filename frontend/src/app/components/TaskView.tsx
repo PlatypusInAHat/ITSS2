@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Target, Users, Calendar, ChevronDown, MessageSquare, LayoutGrid, List, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, Check, Maximize2, Zap } from 'lucide-react';
+import { Plus, Target, Users, Calendar, ChevronDown, MessageSquare, LayoutGrid, List, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, Check, Maximize2, Zap, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { CustomDatePicker } from './CustomDatePicker';
@@ -39,9 +39,10 @@ interface TaskViewProps {
   onUpdateTask?: (taskId: string, updates: Partial<Task>) => void;
   onDeleteTask: (taskId: string) => void;
   onUpdateProject?: (projectId: string, updates: Partial<Project>) => void;
+  onDeleteProject?: (projectId: string) => void;
 }
 
-export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, onUpdateProject }: TaskViewProps) {
+export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, onDeleteTask, onUpdateProject, onDeleteProject }: TaskViewProps) {
   const [projectName, setProjectName] = useState(project.name);
   const [userSearch, setUserSearch] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -142,12 +143,22 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
       <div className="px-8 py-6 space-y-6 flex-shrink-0">
         <div className="flex flex-col gap-2">
           <Target className="w-8 h-8 text-gray-400 mb-2" />
-          <input
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            onBlur={handleNameBlur}
-            className="text-4xl font-bold font-sans tracking-tight border-b-2 border-dashed border-gray-600 pb-1 w-full bg-transparent outline-none focus:border-gray-400 transition-colors"
-          />
+          <div className="flex items-center justify-between w-full">
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onBlur={handleNameBlur}
+              className="text-4xl font-bold font-sans tracking-tight border-b-2 border-dashed border-gray-600 pb-1 flex-1 bg-transparent outline-none focus:border-gray-400 transition-colors"
+            />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-gray-500 hover:text-red-400 ml-4 h-9 w-9 p-0"
+              onClick={() => onDeleteProject?.(project.id)}
+            >
+              <Trash2 className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-3 mt-8">
@@ -384,11 +395,21 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
                         key={task.id}
                         className="bg-[#1a1a1a] rounded-lg p-3 text-sm hover:bg-[#252525] shadow-sm border border-gray-800/50 focus-within:ring-1 focus-within:ring-gray-600 transition-shadow space-y-2"
                       >
-                        <input
-                          value={task.title}
-                          onChange={(e) => onUpdateTask?.(task.id, { title: e.target.value })}
-                          className="bg-transparent border-none outline-none w-full text-white cursor-text font-medium"
-                        />
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            value={task.title}
+                            onChange={(e) => onUpdateTask?.(task.id, { title: e.target.value })}
+                            className="bg-transparent border-none outline-none flex-1 text-white cursor-text font-medium"
+                          />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-gray-600 hover:text-red-400 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-all"
+                            onClick={() => onDeleteTask(task.id)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                         <div className="flex items-center gap-2">
                           <CustomDatePicker 
                             trigger={

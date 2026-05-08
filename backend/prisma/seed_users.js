@@ -6,8 +6,6 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding 10 random users...');
 
-  const password = await bcrypt.hash('password123', 10);
-
   const userData = [
     { name: 'Anh Tuấn', email: 'tuan@example.com' },
     { name: 'Minh Hoàng', email: 'hoang@example.com' },
@@ -23,18 +21,23 @@ async function main() {
 
   for (const u of userData) {
     try {
+      // Mỗi lần gọi hash sẽ tạo ra một salt ngẫu nhiên khác nhau
+      const passwordHash = await bcrypt.hash('password123', 10);
+      
       await prisma.user.upsert({
         where: { email: u.email },
-        update: {},
+        update: {
+          password: passwordHash // Cập nhật lại password để thấy chuỗi hash khác nhau
+        },
         create: {
           name: u.name,
           email: u.email,
-          password: password,
+          password: passwordHash,
         },
       });
-      console.log(`✅ Created user: ${u.name} (${u.email})`);
+      console.log(`✅ Created/Updated user: ${u.name} (${u.email})`);
     } catch (err) {
-      console.error(`❌ Failed to create user ${u.email}:`, err.message);
+      console.error(`❌ Failed to process user ${u.email}:`, err.message);
     }
   }
 

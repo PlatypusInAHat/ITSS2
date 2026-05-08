@@ -101,6 +101,19 @@ export default function App() {
     }
   };
 
+  const handleDeleteProject = async (projectId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xoá dự án này và tất cả nhiệm vụ liên quan?')) return;
+    try {
+      await deleteProject(projectId);
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setTasks(prev => prev.filter(t => t.projectId !== projectId));
+      if (selectedProjectId === projectId) setSelectedProjectId(null);
+    } catch (err) {
+      console.error('Lỗi xoá dự án:', err);
+      alert('Không thể xoá dự án. Vui lòng thử lại.');
+    }
+  };
+
   // ─── Task handlers ───────────────────────────────────────────────────────────
   const handleCreateTask = (projectId: string, status: string) => {
     setCurrentProjectIdForTask(projectId);
@@ -222,7 +235,8 @@ export default function App() {
           return;
         }
         setActiveTab(tab);
-        if (tab !== 'projects') setSelectedProjectId(null);
+        // Luôn reset về trang tổng khi nhấn vào tab
+        setSelectedProjectId(null);
       }} />
       <div className="flex-1 h-full overflow-y-auto relative bg-[#191919]">
         {activeTab === 'home' && <Home />}
@@ -238,12 +252,14 @@ export default function App() {
               onUpdateTask={handleUpdateTask}
               onDeleteTask={handleDeleteTask}
               onUpdateProject={handleUpdateProject}
+              onDeleteProject={handleDeleteProject}
             />
           ) : (
             <ProjectList
               projects={projects}
               onSelectProject={setSelectedProjectId}
               onCreateProject={() => setIsCreateProjectOpen(true)}
+              onDeleteProject={handleDeleteProject}
               selectedProjectId={selectedProjectId}
             />
           )
@@ -255,6 +271,11 @@ export default function App() {
             tasks={tasks}
             onUpdateTask={handleUpdateTask}
             onCreateTask={handleCreateTask}
+            onDeleteTask={handleDeleteTask}
+            onSelectProject={(id) => {
+              setSelectedProjectId(id);
+              setActiveTab('projects');
+            }}
           />
         )}
 

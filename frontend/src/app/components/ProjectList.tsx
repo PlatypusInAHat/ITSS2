@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, CircleDot, ChevronDown, Target, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, LayoutGrid, Calendar } from 'lucide-react';
+import { Plus, CircleDot, ChevronDown, Target, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, LayoutGrid, Calendar, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
@@ -21,10 +21,11 @@ interface ProjectListProps {
   projects: Project[];
   onSelectProject: (projectId: string) => void;
   onCreateProject: () => void;
+  onDeleteProject?: (projectId: string) => void;
   selectedProjectId: string | null;
 }
 
-export function ProjectList({ projects, onSelectProject, onCreateProject, selectedProjectId }: ProjectListProps) {
+export function ProjectList({ projects, onSelectProject, onCreateProject, onDeleteProject, selectedProjectId }: ProjectListProps) {
   const [activeTab, setActiveTab] = useState<'Active' | 'Timeline' | 'Board' | 'All'>('Board');
 
   const groupedProjects = projects.reduce((acc, project) => {
@@ -147,9 +148,22 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, select
                       <span className="text-sm text-gray-400">{project.blockedBy}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
-                        <Plus className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProject?.(project.id);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white h-8 w-8 p-0">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -201,9 +215,22 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, select
                     className="bg-[#222222] rounded-lg border border-gray-800/80 p-4 cursor-pointer hover:border-gray-600 transition-all shadow-sm hover:shadow-md"
                     onClick={() => onSelectProject(project.id)}
                   >
-                    <div className="flex items-start gap-3 mb-3">
-                      <span className="text-xl leading-none mt-0.5">{project.icon}</span>
-                      <h3 className="font-medium text-[15px] leading-snug text-gray-100">{project.name}</h3>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl leading-none mt-0.5">{project.icon}</span>
+                        <h3 className="font-medium text-[15px] leading-snug text-gray-100">{project.name}</h3>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-gray-500 hover:text-red-400 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteProject?.(project.id);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                     
                     {project.dates && (
@@ -244,7 +271,32 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, select
     );
   };
 
-  const renderTimelineView = () => (
+  const parseVNDate = (dateStr: string) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split(' → ');
+    
+    const parseSingle = (s: string) => {
+      // Format: "17 tháng 9, 2025"
+      const match = s.match(/(\d+)\s+tháng\s+(\d+),\s+(\d+)/);
+      if (match) {
+        return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+      }
+      return null;
+    };
+
+    const start = parseSingle(parts[0]);
+    const end = parts[1] ? parseSingle(parts[1]) : start;
+    
+    if (!start || !end) return null;
+    return { start, end };
+  };
+
+  const renderTimelineView = () => {
+    const timelineStart = new Date(2025, 7, 1); // 1/8/2025
+    const timelineEnd = new Date(2025, 11, 31); // 31/12/2025
+    const totalMs = timelineEnd.getTime() - timelineStart.getTime();
+
+    return (
     <div className="flex h-full border border-gray-800/60 rounded-xl overflow-hidden bg-[#1e1e1e]">
       {/* Left Sidebar */}
       <div className="w-[300px] border-r border-gray-800/60 flex flex-col bg-[#1a1a1a] z-10 shadow-[2px_0_5px_rgba(0,0,0,0.2)]">
@@ -307,15 +359,20 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, select
             {Object.entries(groupedProjects).map(([status, statusProjects]) => (
               <div key={status} className="mb-4">
                 <div className="h-[34px]" /> {/* Status header space */}
-                {statusProjects.map((project, idx) => {
-                  let left = '5%';
-                  let width = '15%';
-                  if (project.name.includes('Hệ điều hành')) {
-                    left = '20%'; width = '48%';
-                  } else if (project.name.includes('Web')) {
-                    left = '18%'; width = '55%';
-                  } else if (project.name.includes('CNXH')) {
-                    left = '30%'; width = '20%';
+                {statusProjects.map((project) => {
+                  const dateInfo = parseVNDate(project.dates);
+                  let left = '0%';
+                  let width = '0%';
+
+                  if (dateInfo) {
+                    const startOffset = dateInfo.start.getTime() - timelineStart.getTime();
+                    const endOffset = dateInfo.end.getTime() - timelineStart.getTime();
+                    
+                    const leftPercent = Math.max(0, Math.min(100, (startOffset / totalMs) * 100));
+                    const rightPercent = Math.max(0, Math.min(100, (endOffset / totalMs) * 100));
+                    
+                    left = `${leftPercent}%`;
+                    width = `${Math.max(2, rightPercent - leftPercent)}%`;
                   }
                   
                   return (
@@ -353,6 +410,7 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, select
       </div>
     </div>
   );
+};
 
   return (
     <div className="min-h-full bg-[#121212] text-white">
