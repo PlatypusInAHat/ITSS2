@@ -112,10 +112,14 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
                     {project.dates || 'Trống'}
                   </button>
                 }
-                onSelect={(date) => {
-                  if (date && onUpdateProject) {
-                    const formattedDate = `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
-                    onUpdateProject(project.id, { dates: formattedDate });
+                mode="range"
+                onRangeSelect={(range) => {
+                  if (range?.from && onUpdateProject) {
+                    const fromStr = `${range.from.getDate()} tháng ${range.from.getMonth() + 1}, ${range.from.getFullYear()}`;
+                    const toStr = range.to ? ` → ${range.to.getDate()} tháng ${range.to.getMonth() + 1}, ${range.to.getFullYear()}` : '';
+                    onUpdateProject(project.id, { dates: `${fromStr}${toStr}` });
+                  } else if (!range && onUpdateProject) {
+                    onUpdateProject(project.id, { dates: '' });
                   }
                 }}
               />

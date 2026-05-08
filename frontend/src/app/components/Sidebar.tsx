@@ -1,4 +1,4 @@
-import { Target, ListTodo, User, Bell, Settings, Search, Home } from 'lucide-react';
+import { Target, ListTodo, User, Bell, Settings, Search, Home, LogOut } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -72,6 +72,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         <button className={navItemClass('settings')} onClick={() => onTabChange('settings')}>
           <Settings className={`w-4 h-4 ${iconColor('settings')}`} />
           Cài đặt
+        </button>
+        <button className="w-full flex items-center gap-3 px-3 py-2 mt-1 rounded-md text-sm transition-colors text-red-400 hover:text-red-300 hover:bg-[#2a2a2a]" onClick={() => onTabChange('logout')}>
+          <LogOut className="w-4 h-4" />
+          Đăng xuất
         </button>
       </div>
     </div>

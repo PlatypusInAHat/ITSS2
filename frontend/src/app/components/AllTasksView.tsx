@@ -33,6 +33,7 @@ interface AllTasksViewProps {
 }
 
 export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: AllTasksViewProps) {
+  const [activeTab, setActiveTab] = useState<'By project' | 'Board' | 'All tasks'>('Board');
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>(
     projects.reduce((acc, p) => ({ ...acc, [p.id]: true }), {})
   );
@@ -70,12 +71,15 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
   const getPriorityBadge = (priority?: string) => {
     if (!priority) return null;
     if (priority === 'High') {
-      return <Badge className="bg-red-900/60 text-red-200 hover:bg-red-900/60 rounded uppercase text-[10px] px-1.5 py-0">High</Badge>;
+      return <Badge className="bg-red-900/80 text-red-100 hover:bg-red-900/80 rounded uppercase text-[10px] px-1.5 py-0 border-none">High</Badge>;
     }
     if (priority === 'Medium') {
-      return <Badge className="bg-orange-900/60 text-orange-200 hover:bg-orange-900/60 rounded uppercase text-[10px] px-1.5 py-0">Medium</Badge>;
+      return <Badge className="bg-orange-900/80 text-orange-100 hover:bg-orange-900/80 rounded uppercase text-[10px] px-1.5 py-0 border-none">Medium</Badge>;
     }
-    return <Badge className="bg-gray-800 text-gray-300 rounded uppercase text-[10px] px-1.5 py-0">{priority}</Badge>;
+    if (priority === 'Low') {
+      return <Badge className="bg-green-900/80 text-green-100 hover:bg-green-900/80 rounded uppercase text-[10px] px-1.5 py-0 border-none">Low</Badge>;
+    }
+    return <Badge className="bg-gray-800 text-gray-300 rounded uppercase text-[10px] px-1.5 py-0 border-none">{priority}</Badge>;
   };
 
   const getTaskIcon = (iconName?: string) => {
@@ -202,38 +206,185 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
     );
   };
 
+  const renderByProjectView = () => (
+    <div className="space-y-6">
+      {projects.map(project => {
+        const projectTasks = tasks.filter(t => t.projectId === project.id);
+        if (projectTasks.length === 0) return null;
+
+        return (
+          <div key={project.id}>
+            <div 
+              className="flex items-center gap-2 cursor-pointer hover:bg-[#222] p-1 rounded w-fit mb-2 group"
+              onClick={() => toggleProject(project.id)}
+            >
+              {expandedProjects[project.id] ? (
+                <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white" />
+              )}
+              <span className="text-xl">{project.icon}</span>
+              <h2 className="font-semibold">{project.name}</h2>
+              <span className="text-gray-500 text-sm">{projectTasks.length}</span>
+            </div>
+            
+            {renderTable(project.id, projectTasks)}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const groupedTasks = tasks.reduce((acc, task) => {
+    if (!acc[task.status]) {
+      acc[task.status] = [];
+    }
+    acc[task.status].push(task);
+    return acc;
+  }, {} as Record<string, typeof tasks>);
+
+  const renderBoardView = () => {
+    const statuses = ['Not Started', 'In Progress', 'Done'];
+    
+    return (
+      <div className="flex gap-6 h-full overflow-x-auto pb-4">
+        {statuses.map(status => {
+          const statusTasks = groupedTasks[status] || [];
+          
+          let headerColor = 'bg-gray-800 text-gray-300';
+          let bgColor = 'bg-[#1e1e1e] border-gray-800/60';
+          let dotColor = 'bg-gray-400';
+          
+          if (status === 'In Progress') {
+            headerColor = 'bg-blue-900/50 text-blue-300';
+            bgColor = 'bg-[#1a202c]/30 border-blue-900/30';
+            dotColor = 'bg-blue-500';
+          } else if (status === 'Done') {
+            headerColor = 'bg-green-900/50 text-green-300';
+            bgColor = 'bg-[#1a2c1f]/30 border-green-900/30';
+            dotColor = 'bg-green-500';
+          } else {
+            headerColor = 'bg-gray-800 text-gray-300';
+            bgColor = 'bg-[#1a1a1a] border-gray-800/60';
+            dotColor = 'bg-gray-400';
+          }
+
+          return (
+            <div key={status} className={`flex-shrink-0 w-[340px] rounded-2xl border p-4 flex flex-col ${bgColor} shadow-sm`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${headerColor} text-xs font-semibold`}>
+                  <div className={`w-2 h-2 rounded-full ${dotColor}`} />
+                  {status}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-300 h-6 w-8 p-0">
+                    ...
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-300 h-6 w-8 p-0">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                {statusTasks.map(task => {
+                  const project = projects.find(p => p.id === task.projectId);
+                  return (
+                    <div 
+                      key={task.id} 
+                      className="bg-[#222222] rounded-xl border border-gray-800/80 p-4 cursor-pointer hover:border-gray-600 transition-all shadow-sm hover:shadow-md group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start gap-3">
+                          <span className="text-lg leading-none mt-0.5">{getTaskIcon(task.icon)}</span>
+                          <h3 className="font-medium text-[15px] leading-snug text-gray-100">{task.title}</h3>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="text-gray-500 hover:text-white p-1 rounded hover:bg-gray-700"><AlignLeft className="w-3.5 h-3.5" /></button>
+                          <button className="text-gray-500 hover:text-white p-1 rounded hover:bg-gray-700">...</button>
+                        </div>
+                      </div>
+                      
+                      {task.assignee && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-gray-300">
+                            {task.assignee.charAt(0)}
+                          </div>
+                          <span className="text-[13px] text-gray-400 font-medium">{task.assignee}</span>
+                        </div>
+                      )}
+                      
+                      {project && (
+                        <div className="flex items-center gap-2 mb-3 bg-[#1a1a1a] rounded p-1.5 px-2">
+                          <span className="text-sm leading-none">{project.icon}</span>
+                          <span className="text-[12px] text-gray-300 truncate font-medium">{project.name}</span>
+                          <span className="text-[10px] text-gray-500 ml-auto uppercase bg-gray-800 px-1 rounded">Project</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-auto pt-1">
+                        {getPriorityBadge(task.priority)}
+                      </div>
+                    </div>
+                  );
+                })}
+                <Button 
+                  variant="ghost" 
+                  className="w-full text-gray-500 hover:text-gray-300 hover:bg-[#2a2a2a] justify-start text-sm font-medium py-2 h-auto mt-2 border border-dashed border-gray-700/50"
+                  onClick={() => onCreateTask(projects[0]?.id || '', status)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nhiệm vụ mới
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
-    <div className="flex-1 overflow-auto bg-[#191919] text-white p-8">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="flex-1 flex flex-col h-full bg-[#121212] text-white p-8">
+      <div className="flex items-center gap-3 mb-6 shrink-0">
         <CheckSquare className="w-8 h-8" />
         <h1 className="text-3xl font-bold">Tasks</h1>
       </div>
 
-      <div className="flex items-center justify-between mb-8 border-b border-gray-800 pb-2">
+      <div className="flex items-center justify-between mb-8 border-b border-gray-800 pb-3 shrink-0">
         <div className="flex gap-1">
-          <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-[#2a2a2a] text-white rounded-md">
+          <button 
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'By project' ? 'bg-[#2a2a2a] text-white' : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'}`}
+            onClick={() => setActiveTab('By project')}
+          >
             <Target className="w-4 h-4" /> By project
           </button>
-          <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-400 hover:text-white hover:bg-[#2a2a2a] rounded-md transition-colors">
+          <button 
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'Board' ? 'bg-[#2a2a2a] text-white' : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'}`}
+            onClick={() => setActiveTab('Board')}
+          >
             <LayoutGrid className="w-4 h-4" /> Board
           </button>
-          <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-400 hover:text-white hover:bg-[#2a2a2a] rounded-md transition-colors">
+          <button 
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'All tasks' ? 'bg-[#2a2a2a] text-white' : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'}`}
+            onClick={() => setActiveTab('All tasks')}
+          >
             <List className="w-4 h-4" /> All tasks
           </button>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 mr-2 text-gray-400">
-            <button className="p-1.5 hover:bg-gray-800 rounded"><Filter className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-gray-800 rounded"><ArrowUpDown className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-gray-800 rounded"><Sparkles className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-gray-800 rounded"><Search className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-gray-800 rounded"><SlidersHorizontal className="w-4 h-4" /></button>
+            <button className="p-1.5 hover:bg-[#2a2a2a] rounded transition-colors"><Filter className="w-4 h-4" /></button>
+            <button className="p-1.5 hover:bg-[#2a2a2a] rounded transition-colors"><ArrowUpDown className="w-4 h-4" /></button>
+            <button className="p-1.5 hover:bg-[#2a2a2a] rounded transition-colors"><Sparkles className="w-4 h-4" /></button>
+            <button className="p-1.5 hover:bg-[#2a2a2a] rounded transition-colors"><Search className="w-4 h-4" /></button>
+            <button className="p-1.5 hover:bg-[#2a2a2a] rounded transition-colors"><SlidersHorizontal className="w-4 h-4" /></button>
           </div>
           
           <div className="flex items-center">
             <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white h-8 rounded-r-none px-3 text-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-8 rounded-r-none px-3 text-sm font-medium"
               onClick={() => onCreateTask(projects[0]?.id || '', 'Not Started')}
             >
               Mới
@@ -245,31 +396,10 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
         </div>
       </div>
 
-      <div className="space-y-6">
-        {projects.map(project => {
-          const projectTasks = tasks.filter(t => t.projectId === project.id);
-          if (projectTasks.length === 0) return null;
-
-          return (
-            <div key={project.id}>
-              <div 
-                className="flex items-center gap-2 cursor-pointer hover:bg-[#222] p-1 rounded w-fit mb-2 group"
-                onClick={() => toggleProject(project.id)}
-              >
-                {expandedProjects[project.id] ? (
-                  <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white" />
-                )}
-                <span className="text-xl">{project.icon}</span>
-                <h2 className="font-semibold">{project.name}</h2>
-                <span className="text-gray-500 text-sm">{projectTasks.length}</span>
-              </div>
-              
-              {renderTable(project.id, projectTasks)}
-            </div>
-          );
-        })}
+      <div className="flex-1 overflow-hidden min-h-0">
+        {activeTab === 'By project' && <div className="h-full overflow-y-auto pr-2">{renderByProjectView()}</div>}
+        {activeTab === 'Board' && renderBoardView()}
+        {activeTab === 'All tasks' && <div className="h-full overflow-y-auto pr-2">{renderByProjectView()}</div>}
       </div>
     </div>
   );
