@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Input } from './ui/input';
 import { Calendar } from './ui/calendar';
 import { Switch } from './ui/switch';
 import { ChevronRight } from 'lucide-react';
@@ -26,19 +27,34 @@ export function CustomDatePicker({ date, range, onSelect, onRangeSelect, trigger
       </PopoverTrigger>
       <PopoverContent className="w-80 bg-[#1e1e1e] border-[#333] text-gray-200 p-0 shadow-xl rounded-xl" align="start">
         <div className="p-4 space-y-4">
-          <div className="bg-[#2a2a2a] rounded-md p-2 border border-gray-700/50">
-            <span className="text-blue-200 bg-blue-500/20 px-1 rounded select-none text-xs">
-              {isRangeMode ? (
-                selectedRange?.from ? (
-                  <>
-                    {selectedRange.from.toLocaleDateString('vi-VN')}
-                    {selectedRange.to ? ` → ${selectedRange.to.toLocaleDateString('vi-VN')}` : ''}
-                  </>
-                ) : 'Chọn khoảng ngày'
-              ) : (
-                selectedDate ? selectedDate.toLocaleDateString('vi-VN') : 'Chọn ngày'
-              )}
+          <div className="flex gap-2 mb-2">
+            <div className="flex-1 space-y-1">
+              <Input 
+                className="h-9 bg-[#2a2a2a] border-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                placeholder="Ngày bắt đầu"
+                value={selectedRange?.from ? selectedRange.from.toLocaleDateString('vi-VN') : (selectedDate ? selectedDate.toLocaleDateString('vi-VN') : '')}
+                readOnly
+              />
+            </div>
+            {isRangeMode && (
+              <div className="flex-1 space-y-1">
+                <Input 
+                  className="h-9 bg-[#2a2a2a] border-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                  placeholder="Ngày kết thúc"
+                  value={selectedRange?.to ? selectedRange.to.toLocaleDateString('vi-VN') : ''}
+                  readOnly
+                />
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between px-1 mb-2">
+            <span className="text-sm font-bold">
+              {isRangeMode ? 'Chọn khoảng ngày' : 'Chọn ngày'}
             </span>
+            <div className="flex gap-2">
+              <button className="text-xs text-gray-400 hover:text-white transition-colors">Hôm nay</button>
+            </div>
           </div>
           
           <Calendar

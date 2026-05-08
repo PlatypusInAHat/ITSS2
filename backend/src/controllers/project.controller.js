@@ -62,4 +62,28 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { getAll, getOne, create, update, remove };
+// POST /api/projects/:id/members
+async function addMember(req, res) {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'Thiếu userId' });
+    const project = await projectService.addMember(req.params.id, userId);
+    res.json(project);
+  } catch (err) {
+    console.error('[Project] addMember:', err.message);
+    res.status(500).json({ error: 'Không thể thêm thành viên' });
+  }
+}
+
+// DELETE /api/projects/:id/members/:userId
+async function removeMember(req, res) {
+  try {
+    const project = await projectService.removeMember(req.params.id, req.params.userId);
+    res.json(project);
+  } catch (err) {
+    console.error('[Project] removeMember:', err.message);
+    res.status(500).json({ error: 'Không thể xoá thành viên' });
+  }
+}
+
+module.exports = { getAll, getOne, create, update, remove, addMember, removeMember };

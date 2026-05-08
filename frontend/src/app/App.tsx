@@ -82,20 +82,20 @@ export default function App() {
     }
   };
 
-  const handleCreateProject = async (name: string, description: string) => {
+  const handleCreateProject = async (data: any) => {
     try {
       const newProject = await createProject({
-        name,
-        description,
+        ...data,
         status: 'Planning',
-        owner: '',
-        dates: '',
+        owner: user?.name || '',
         priority: '',
         completion: 0,
         blockedBy: '',
         icon: '🎯',
       });
-      setProjects(prev => [newProject, ...prev]);
+      // Fetch lại để có đầy đủ members từ server
+      const projectsData = await getProjects();
+      setProjects(projectsData);
     } catch (err) {
       console.error('Lỗi tạo dự án:', err);
     }
@@ -108,12 +108,11 @@ export default function App() {
     setIsCreateTaskOpen(true);
   };
 
-  const handleAddTask = async (title: string) => {
+  const handleAddTask = async (data: any) => {
     if (!currentProjectIdForTask) return;
     try {
       const newTask = await createTask({
-        title,
-        status: currentTaskStatus as Task['status'],
+        ...data,
         projectId: currentProjectIdForTask,
       });
       setTasks(prev => [...prev, newTask]);
@@ -225,7 +224,7 @@ export default function App() {
         setActiveTab(tab);
         if (tab !== 'projects') setSelectedProjectId(null);
       }} />
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <div className="flex-1 h-full overflow-y-auto relative bg-[#191919]">
         {activeTab === 'home' && <Home />}
 
         {activeTab === 'projects' && (
@@ -272,12 +271,14 @@ export default function App() {
           open={isCreateProjectOpen}
           onClose={() => setIsCreateProjectOpen(false)}
           onCreate={handleCreateProject}
+          currentUser={user}
         />
 
         <CreateTaskDialog
           open={isCreateTaskOpen}
           onClose={() => setIsCreateTaskOpen(false)}
           onCreate={handleAddTask}
+          project={projects.find(p => p.id === currentProjectIdForTask)}
         />
       </div>
     </div>

@@ -18,4 +18,10 @@ router.put('/:id', project.update);
 // DELETE /api/projects/:id
 router.delete('/:id', project.remove);
 
+// POST   /api/projects/:id/members
+router.post('/:id/members', project.addMember);
+
+// DELETE /api/projects/:id/members/:userId
+router.delete('/:id/members/:userId', project.removeMember);
+
 module.exports = router;

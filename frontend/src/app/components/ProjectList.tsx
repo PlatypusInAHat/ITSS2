@@ -355,7 +355,7 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, select
   );
 
   return (
-    <div className="flex flex-col h-full bg-[#121212] text-white">
+    <div className="min-h-full bg-[#121212] text-white">
       <div className="flex items-center justify-between px-8 py-5 border-b border-gray-800">
         <div className="flex items-center gap-3">
           <Target className="w-7 h-7 text-gray-300" />
@@ -437,7 +437,7 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, select
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-8 py-6">
+      <div className="px-8 py-6">
         {activeTab === 'Active' && renderActiveView()}
         {activeTab === 'Board' && renderBoardView()}
         {activeTab === 'Timeline' && renderTimelineView()}

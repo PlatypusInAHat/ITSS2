@@ -19,6 +19,13 @@ export interface Project {
   createdAt?: string;
   updatedAt?: string;
   _count?: { tasks: number };
+  members?: { id: string; name: string; email: string }[];
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export interface Task {
@@ -33,6 +40,7 @@ export interface Task {
   icon?: string;
   createdAt?: string;
   updatedAt?: string;
+  assignees?: User[];
 }
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
@@ -98,6 +106,11 @@ export const register = async (data: any) => {
 
 export const getMe = () => request<any>('/api/auth/me');
 
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export const searchUsers = (q: string): Promise<User[]> =>
+  request<User[]>(`/api/users/search?q=${encodeURIComponent(q)}`);
+
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 export const getProjects = (): Promise<Project[]> =>
@@ -120,6 +133,17 @@ export const updateProject = (id: string, data: Partial<Project>): Promise<Proje
 
 export const deleteProject = (id: string): Promise<void> =>
   request<void>(`/api/projects/${id}`, { method: 'DELETE' });
+
+export const addProjectMember = (projectId: string, userId: string): Promise<Project> =>
+  request<Project>(`/api/projects/${projectId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+
+export const removeProjectMember = (projectId: string, userId: string): Promise<Project> =>
+  request<Project>(`/api/projects/${projectId}/members/${userId}`, {
+    method: 'DELETE',
+  });
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 

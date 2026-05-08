@@ -345,7 +345,7 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#121212] text-white p-8">
+    <div className="min-h-full bg-[#121212] text-white p-8">
       <div className="flex items-center gap-3 mb-6 shrink-0">
         <CheckSquare className="w-8 h-8" />
         <h1 className="text-3xl font-bold">Tasks</h1>
@@ -396,10 +396,10 @@ export function AllTasksView({ projects, tasks, onUpdateTask, onCreateTask }: Al
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden min-h-0">
-        {activeTab === 'By project' && <div className="h-full overflow-y-auto pr-2">{renderByProjectView()}</div>}
+      <div>
+        {activeTab === 'By project' && renderByProjectView()}
         {activeTab === 'Board' && renderBoardView()}
-        {activeTab === 'All tasks' && <div className="h-full overflow-y-auto pr-2">{renderByProjectView()}</div>}
+        {activeTab === 'All tasks' && renderByProjectView()}
       </div>
     </div>
   );

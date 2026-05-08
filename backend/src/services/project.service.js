@@ -5,6 +5,7 @@ async function getAllProjects() {
   return prisma.project.findMany({
     include: {
       _count: { select: { tasks: true } },
+      members: { select: { id: true, name: true, email: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -17,6 +18,7 @@ async function getProjectById(id) {
     include: {
       tasks: { orderBy: { createdAt: 'asc' } },
       _count: { select: { tasks: true } },
+      members: { select: { id: true, name: true, email: true } },
     },
   });
 }
@@ -34,7 +36,11 @@ async function createProject(data) {
       completion: data.completion ?? 0,
       blockedBy: data.blockedBy ?? '',
       icon: data.icon ?? '🎯',
+      members: data.memberIds ? {
+        connect: data.memberIds.map(id => ({ id }))
+      } : undefined,
     },
+    include: { members: { select: { id: true, name: true, email: true } } },
   });
 }
 
@@ -73,6 +79,24 @@ async function recalculateCompletion(projectId) {
   });
 }
 
+// ─── Thêm thành viên ──────────────────────────────────────────────────────────
+async function addMember(projectId, userId) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { members: { connect: { id: userId } } },
+    include: { members: { select: { id: true, name: true, email: true } } },
+  });
+}
+
+// ─── Xoá thành viên ───────────────────────────────────────────────────────────
+async function removeMember(projectId, userId) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { members: { disconnect: { id: userId } } },
+    include: { members: { select: { id: true, name: true, email: true } } },
+  });
+}
+
 module.exports = {
   getAllProjects,
   getProjectById,
@@ -80,4 +104,6 @@ module.exports = {
   updateProject,
   deleteProject,
   recalculateCompletion,
+  addMember,
+  removeMember,
 };

@@ -8,6 +8,7 @@ async function getAllTasks(projectId) {
   return prisma.task.findMany({
     where: projectId ? { projectId } : undefined,
     orderBy: { createdAt: 'asc' },
+    include: { assignees: { select: { id: true, name: true, email: true } } },
   });
 }
 
@@ -16,12 +17,16 @@ async function getTasksByProject(projectId) {
   return prisma.task.findMany({
     where: { projectId },
     orderBy: { createdAt: 'asc' },
+    include: { assignees: { select: { id: true, name: true, email: true } } },
   });
 }
 
 // ─── Lấy một task theo id ─────────────────────────────────────────────────────
 async function getTaskById(id) {
-  return prisma.task.findUnique({ where: { id } });
+  return prisma.task.findUnique({
+    where: { id },
+    include: { assignees: { select: { id: true, name: true, email: true } } },
+  });
 }
 
 // ─── Tạo task mới ─────────────────────────────────────────────────────────────
@@ -36,7 +41,11 @@ async function createTask(data) {
       priority: data.priority ?? '',
       summary: data.summary ?? '',
       icon: data.icon ?? 'calendar',
+      assignees: data.assigneeIds ? {
+        connect: data.assigneeIds.map(id => ({ id }))
+      } : undefined,
     },
+    include: { assignees: { select: { id: true, name: true, email: true } } },
   });
   await recalculateCompletion(task.projectId);
   return task;
@@ -52,8 +61,17 @@ async function updateTask(id, data) {
   if (data.priority !== undefined) updateData.priority = data.priority;
   if (data.summary !== undefined)  updateData.summary = data.summary;
   if (data.icon !== undefined)     updateData.icon = data.icon;
+  if (data.assigneeIds !== undefined) {
+    updateData.assignees = {
+      set: data.assigneeIds.map(id => ({ id }))
+    };
+  }
 
-  const task = await prisma.task.update({ where: { id }, data: updateData });
+  const task = await prisma.task.update({
+    where: { id },
+    data: updateData,
+    include: { assignees: { select: { id: true, name: true, email: true } } },
+  });
   await recalculateCompletion(task.projectId);
   return task;
 }
@@ -65,7 +83,11 @@ async function updateTaskStatus(id, status) {
     err.statusCode = 400;
     throw err;
   }
-  const task = await prisma.task.update({ where: { id }, data: { status } });
+  const task = await prisma.task.update({
+    where: { id },
+    data: { status },
+    include: { assignees: { select: { id: true, name: true, email: true } } },
+  });
   await recalculateCompletion(task.projectId);
   return task;
 }

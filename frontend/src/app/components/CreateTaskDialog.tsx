@@ -3,23 +3,47 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from './ui/
 import { Button } from './ui/button';
 import { Target, Users, Calendar, ChevronDown, Sparkles, LayoutTemplate, AlignLeft, ArrowDownCircle, Tag, ListTodo } from 'lucide-react';
 import { CustomDatePicker } from './CustomDatePicker';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { CheckCircle2, Flag } from 'lucide-react';
 
 interface CreateTaskDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (title: string) => void;
+  onCreate: (data: any) => void;
+  project?: { id: string; members?: { id: string; name: string; email: string }[] };
 }
 
-export function CreateTaskDialog({ open, onClose, onCreate }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ open, onClose, onCreate, project }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('Task');
+  const [status, setStatus] = useState<'Not Started' | 'In Progress' | 'Done'>('Not Started');
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [priority, setPriority] = useState('');
+  const [due, setDue] = useState('');
+  const [summary, setSummary] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
-      onCreate(title);
+      onCreate({
+        title,
+        status,
+        assigneeIds,
+        priority,
+        due,
+        summary
+      });
       setTitle('Task');
+      setStatus('Not Started');
+      setAssigneeIds([]);
+      setPriority('');
+      setDue('');
+      setSummary('');
       onClose();
     }
+  };
+
+  const toggleAssignee = (id: string) => {
+    setAssigneeIds(prev => prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]);
   };
 
   return (
@@ -51,8 +75,50 @@ export function CreateTaskDialog({ open, onClose, onCreate }: CreateTaskDialogPr
                     <Users className="w-4 h-4" />
                     <span>Assignee</span>
                   </div>
-                  <div className="text-gray-400">
-                    Trống
+                  <div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="flex items-center gap-2 text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors">
+                          <div className="flex -space-x-1">
+                            {assigneeIds.length > 0 ? (
+                              assigneeIds.map(id => {
+                                const m = project?.members?.find(mem => mem.id === id);
+                                return m ? (
+                                  <div key={id} className="w-5 h-5 rounded-full bg-blue-600 border border-[#191919] flex items-center justify-center text-[8px] font-bold" title={m.name}>
+                                    {m.name.charAt(0).toUpperCase()}
+                                  </div>
+                                ) : null;
+                              })
+                            ) : 'Trống'}
+                          </div>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-48 bg-[#1e1e1e] border-[#333] p-1 shadow-2xl rounded-xl">
+                        <div className="p-2 border-b border-gray-800 mb-1">
+                          <span className="text-[10px] font-bold text-gray-500 uppercase">Gán cho...</span>
+                        </div>
+                        {project?.members?.map(m => {
+                          const isAssigned = assigneeIds.includes(m.id);
+                          return (
+                            <button 
+                              key={m.id} 
+                              type="button"
+                              onClick={() => toggleAssignee(m.id)}
+                              className="w-full flex items-center justify-between p-2 hover:bg-gray-800 rounded transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[9px]">{m.name.charAt(0).toUpperCase()}</div>
+                                <span className="text-xs text-gray-300">{m.name}</span>
+                              </div>
+                              {isAssigned && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
+                            </button>
+                          );
+                        })}
+                        {(!project?.members || project.members.length === 0) && (
+                          <div className="p-3 text-[10px] text-gray-500 text-center italic">Chưa có thành viên dự án</div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="flex items-center gap-2 text-gray-400">
@@ -60,10 +126,26 @@ export function CreateTaskDialog({ open, onClose, onCreate }: CreateTaskDialogPr
                     <span>Status</span>
                   </div>
                   <div>
-                    <div className="inline-flex items-center gap-1.5 bg-[#444] border border-[#555] px-3 py-0.5 rounded-full">
-                      <div className="w-2 h-2 rounded-full bg-gray-400" />
-                      <span className="text-xs text-white font-medium">Not Started</span>
-                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="inline-flex items-center gap-1.5 bg-[#444] border border-[#555] px-3 py-0.5 rounded-full">
+                          <div className={`w-2 h-2 rounded-full ${status === 'Done' ? 'bg-green-400' : (status === 'In Progress' ? 'bg-blue-400' : 'bg-gray-400')}`} />
+                          <span className="text-xs text-white font-medium">{status}</span>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-40 bg-[#1e1e1e] border-[#333] p-1 shadow-2xl rounded-xl">
+                        {(['Not Started', 'In Progress', 'Done'] as const).map(s => (
+                          <button 
+                            key={s} 
+                            type="button"
+                            onClick={() => setStatus(s)}
+                            className="w-full text-left p-2 hover:bg-gray-800 rounded text-xs transition-colors"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="flex items-center gap-2 text-gray-400">
@@ -71,8 +153,13 @@ export function CreateTaskDialog({ open, onClose, onCreate }: CreateTaskDialogPr
                     <span>Summary</span>
                     <Sparkles className="w-3 h-3 ml-1 text-gray-500" />
                   </div>
-                  <div className="text-gray-400">
-                    Trống
+                  <div>
+                    <input 
+                      value={summary}
+                      onChange={(e) => setSummary(e.target.value)}
+                      className="bg-transparent border-none outline-none w-full text-gray-400 text-sm focus:text-white transition-colors"
+                      placeholder="Trống"
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 text-gray-400">
@@ -80,11 +167,21 @@ export function CreateTaskDialog({ open, onClose, onCreate }: CreateTaskDialogPr
                     <span>Due</span>
                   </div>
                   <div>
-                    <CustomDatePicker trigger={
-                      <button type="button" className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors">
-                        Trống
-                      </button>
-                    } />
+                    <CustomDatePicker 
+                      mode="single"
+                      trigger={
+                        <button type="button" className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors">
+                          {due || 'Trống'}
+                        </button>
+                      } 
+                      onSelect={(date) => {
+                        if (date) {
+                          setDue(`${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`);
+                        } else {
+                          setDue('');
+                        }
+                      }}
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 text-gray-400">
@@ -99,8 +196,27 @@ export function CreateTaskDialog({ open, onClose, onCreate }: CreateTaskDialogPr
                     <ArrowDownCircle className="w-4 h-4" />
                     <span>Priority</span>
                   </div>
-                  <div className="text-gray-400">
-                    Trống
+                  <div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors">
+                          {priority || 'Trống'}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-40 bg-[#1e1e1e] border-[#333] p-1 shadow-2xl rounded-xl">
+                        {(['Low', 'Medium', 'High', 'Urgent'] as const).map(p => (
+                          <button 
+                            key={p} 
+                            type="button"
+                            onClick={() => setPriority(p)}
+                            className="w-full text-left p-2 hover:bg-gray-800 rounded text-xs transition-colors flex items-center gap-2"
+                          >
+                            <Flag className={`w-3 h-3 ${p === 'Urgent' ? 'text-red-500' : (p === 'High' ? 'text-yellow-500' : 'text-blue-500')}`} />
+                            {p}
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="flex items-center gap-2 text-gray-400">

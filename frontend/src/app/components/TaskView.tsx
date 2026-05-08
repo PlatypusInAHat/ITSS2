@@ -3,6 +3,9 @@ import { Plus, Target, Users, Calendar, ChevronDown, MessageSquare, LayoutGrid, 
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { CustomDatePicker } from './CustomDatePicker';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Search as SearchIcon, X, UserPlus, CheckCircle2 } from 'lucide-react';
+import { searchUsers, addProjectMember, removeProjectMember, updateTask } from '../../api';
 
 interface Task {
   id: string;
@@ -14,6 +17,7 @@ interface Task {
   priority?: string;
   summary?: string;
   icon?: string;
+  assignees?: { id: string; name: string; email: string }[];
 }
 
 interface Project {
@@ -23,6 +27,7 @@ interface Project {
   owner: string;
   dates: string;
   icon: string;
+  members?: { id: string; name: string; email: string }[];
 }
 
 interface TaskViewProps {
@@ -38,10 +43,75 @@ interface TaskViewProps {
 
 export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, onUpdateProject }: TaskViewProps) {
   const [projectName, setProjectName] = useState(project.name);
+  const [userSearch, setUserSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     setProjectName(project.name);
   }, [project.name]);
+
+  const handleSearchUsers = async (query: string) => {
+    setUserSearch(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const results = await searchUsers(query);
+      // Lọc bỏ những người đã là thành viên
+      const filtered = results.filter(u => !project.members?.some(m => m.id === u.id));
+      setSearchResults(filtered);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddMember = async (userId: string) => {
+    try {
+      const updatedProject = await addProjectMember(project.id, userId);
+      if (onUpdateProject) {
+        onUpdateProject(project.id, { members: updatedProject.members });
+      }
+      setUserSearch('');
+      setSearchResults([]);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi khi thêm thành viên');
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    try {
+      const updatedProject = await removeProjectMember(project.id, userId);
+      if (onUpdateProject) {
+        onUpdateProject(project.id, { members: updatedProject.members });
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi khi xoá thành viên');
+    }
+  };
+
+  const handleToggleAssignee = async (taskId: string, userId: string, isAssigned: boolean) => {
+    if (!onUpdateTask) return;
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    let newAssigneeIds = task.assignees?.map(a => a.id) || [];
+    if (isAssigned) {
+      newAssigneeIds = newAssigneeIds.filter(id => id !== userId);
+    } else {
+      newAssigneeIds = [...newAssigneeIds, userId];
+    }
+
+    try {
+      await onUpdateTask(taskId, { assigneeIds: newAssigneeIds } as any);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleNameBlur = () => {
     if (projectName.trim() !== project.name && onUpdateProject) {
@@ -68,8 +138,8 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#191919] text-white">
-      <div className="px-8 py-6 space-y-6">
+    <div className="min-h-full bg-[#191919] text-white">
+      <div className="px-8 py-6 space-y-6 flex-shrink-0">
         <div className="flex flex-col gap-2">
           <Target className="w-8 h-8 text-gray-400 mb-2" />
           <input
@@ -97,8 +167,77 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
               <Users className="w-4 h-4" />
               <span>Owner</span>
             </div>
-            <div className="text-gray-400">
+            <div className="text-gray-400 flex items-center gap-2">
               {project.owner || 'Trống'}
+              <div className="w-px h-3 bg-gray-700 mx-1" />
+              <div className="flex -space-x-2">
+                {project.members?.map(m => (
+                  <div key={m.id} title={m.name} className="w-6 h-6 rounded-full bg-blue-600 border border-[#191919] flex items-center justify-center text-[10px] font-bold">
+                    {m.name.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="p-1 hover:bg-gray-800 rounded transition-colors text-blue-400">
+                    <UserPlus className="w-4 h-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 bg-[#1e1e1e] border-[#333] p-0 shadow-2xl rounded-xl">
+                  <div className="p-3 border-b border-gray-800">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Thành viên dự án</h4>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto p-1">
+                    {project.members?.map(m => (
+                      <div key={m.id} className="flex items-center justify-between p-2 hover:bg-gray-800 rounded group transition-colors">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px]">
+                            {m.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-medium text-gray-200">{m.name}</span>
+                            <span className="text-[10px] text-gray-500">{m.email}</span>
+                          </div>
+                        </div>
+                        <button onClick={() => handleRemoveMember(m.id)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-400">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {(!project.members || project.members.length === 0) && (
+                      <div className="p-4 text-center text-xs text-gray-500 italic">Chưa có thành viên nào</div>
+                    )}
+                  </div>
+                  <div className="p-2 border-t border-gray-800 bg-[#252525]/30">
+                    <div className="relative">
+                      <SearchIcon className="absolute left-2 top-2 w-3 h-3 text-gray-500" />
+                      <input 
+                        className="w-full bg-[#1a1a1a] border border-gray-700 rounded-md py-1.5 pl-7 pr-2 text-xs outline-none focus:border-blue-500"
+                        placeholder="Tìm theo email hoặc tên..."
+                        value={userSearch}
+                        onChange={(e) => handleSearchUsers(e.target.value)}
+                      />
+                    </div>
+                    {searchResults.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {searchResults.map(u => (
+                          <button 
+                            key={u.id} 
+                            onClick={() => handleAddMember(u.id)}
+                            className="w-full flex items-center gap-2 p-1.5 hover:bg-blue-600 rounded text-left transition-colors"
+                          >
+                            <div className="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-[9px]">{u.name.charAt(0).toUpperCase()}</div>
+                            <div className="flex flex-col">
+                              <span className="text-xs">{u.name}</span>
+                              <span className="text-[10px] opacity-70">{u.email}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex items-center gap-2 text-gray-400">
@@ -162,7 +301,7 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
         </div>
       </div>
 
-      <div className="flex-1 border-t border-gray-800 overflow-auto">
+      <div className="flex-shrink-0 border-t border-gray-800">
         <div className="px-8 py-6">
           <h2 className="text-xl mb-4">Project tasks</h2>
 
@@ -250,20 +389,66 @@ export function TaskView({ project, tasks, onBack, onCreateTask, onUpdateTask, o
                           onChange={(e) => onUpdateTask?.(task.id, { title: e.target.value })}
                           className="bg-transparent border-none outline-none w-full text-white cursor-text font-medium"
                         />
-                        <CustomDatePicker 
-                          trigger={
-                            <button className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
-                              <Calendar className="w-3 h-3" />
-                              {task.due || 'Thêm ngày'}
-                            </button>
-                          }
-                          onSelect={(date) => {
-                            if (date && onUpdateTask) {
-                              const formattedDate = `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
-                              onUpdateTask(task.id, { due: formattedDate });
+                        <div className="flex items-center gap-2">
+                          <CustomDatePicker 
+                            trigger={
+                              <button className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
+                                <Calendar className="w-3 h-3" />
+                                {task.due || 'Thêm ngày'}
+                              </button>
                             }
-                          }}
-                        />
+                            onSelect={(date) => {
+                              if (date && onUpdateTask) {
+                                const formattedDate = `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
+                                onUpdateTask(task.id, { due: formattedDate });
+                              }
+                            }}
+                          />
+                          <div className="flex-1" />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="flex -space-x-1 hover:bg-gray-800 p-0.5 rounded transition-colors">
+                                {task.assignees && task.assignees.length > 0 ? (
+                                  task.assignees.map(a => (
+                                    <div key={a.id} className="w-5 h-5 rounded-full bg-blue-600 border border-[#1a1a1a] flex items-center justify-center text-[8px] font-bold" title={a.name}>
+                                      {a.name.charAt(0).toUpperCase()}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full border border-dashed border-gray-600 flex items-center justify-center text-gray-500">
+                                    <Users className="w-3 h-3" />
+                                  </div>
+                                )}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 bg-[#1e1e1e] border-[#333] p-1 shadow-2xl rounded-xl">
+                              <div className="p-2 border-b border-gray-800 mb-1">
+                                <span className="text-[10px] font-bold text-gray-500 uppercase">Gán cho...</span>
+                              </div>
+                              {project.members?.map(m => {
+                                const isAssigned = task.assignees?.some(a => a.id === m.id);
+                                return (
+                                  <button 
+                                    key={m.id} 
+                                    onClick={() => handleToggleAssignee(task.id, m.id, !!isAssigned)}
+                                    className="w-full flex items-center justify-between p-2 hover:bg-gray-800 rounded transition-colors group"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px]">
+                                        {m.name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <span className="text-xs text-gray-300">{m.name}</span>
+                                    </div>
+                                    {isAssigned && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
+                                  </button>
+                                );
+                              })}
+                              {(!project.members || project.members.length === 0) && (
+                                <div className="p-3 text-[10px] text-gray-500 text-center italic">Hãy thêm thành viên vào dự án trước</div>
+                              )}
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </div>
                     ))}
 
