@@ -6,6 +6,7 @@ import { CreateTaskDialog } from '../components/task/CreateTaskDialog';
 import { Sidebar } from '../components/common/Sidebar';
 import { Home } from '../pages/Home';
 import { AllTasksView } from '../pages/AllTasksView';
+import { NotificationView } from '../pages/NotificationView';
 import { Login } from '../pages/Login';
 import {
   type Project,
@@ -163,6 +164,15 @@ export default function App() {
     try {
       const updated = await updateTask(taskId, updates);
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updated } : t));
+      
+      // Nếu weight hoặc status thay đổi, cần cập nhật completion của project
+      if (updates.weight !== undefined || updates.status !== undefined) {
+        const { getProject } = await import('../api');
+        const updatedProject = await getProject(updated.projectId);
+        setProjects(prev =>
+          prev.map(p => p.id === updated.projectId ? { ...p, completion: updatedProject.completion } : p)
+        );
+      }
     } catch (err) {
       console.error('Lỗi cập nhật công việc:', err);
     }
@@ -288,7 +298,11 @@ export default function App() {
           />
         )}
 
-        {(activeTab === 'account' || activeTab === 'notifications' || activeTab === 'settings') && (
+        {activeTab === 'notifications' && (
+          <NotificationView />
+        )}
+
+        {(activeTab === 'account' || activeTab === 'settings') && (
           <div className="flex-1 flex items-center justify-center bg-[#191919] text-gray-500">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-gray-300 mb-2">Tính năng đang phát triển</h2>
