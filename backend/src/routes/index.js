@@ -9,6 +9,11 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 const router = Router();
 
+// Root
+router.get('/', (_req, res) => {
+  res.json({ message: 'Welcome to ITSS2 API', status: 'running' });
+});
+
 // Health check
 router.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
