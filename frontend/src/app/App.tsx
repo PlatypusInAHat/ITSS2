@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ProjectList } from '../pages/ProjectList';
-import { TaskView } from '../pages/TaskView';
+import { Suspense, lazy } from 'react';
 import { CreateProjectDialog } from '../components/project/CreateProjectDialog';
 import { CreateTaskDialog } from '../components/task/CreateTaskDialog';
 import { Sidebar } from '../components/common/Sidebar';
-import { Home } from '../pages/Home';
-import { AllTasksView } from '../pages/AllTasksView';
-import { NotificationView } from '../pages/NotificationView';
-import { Login } from '../pages/Login';
+
+// Lazy load pages for code splitting to improve initial loading speed
+const ProjectList = lazy(() => import('../pages/ProjectList').then(m => ({ default: m.ProjectList })));
+const TaskView = lazy(() => import('../pages/TaskView').then(m => ({ default: m.TaskView })));
+const Home = lazy(() => import('../pages/Home').then(m => ({ default: m.Home })));
+const AllTasksView = lazy(() => import('../pages/AllTasksView').then(m => ({ default: m.AllTasksView })));
+const NotificationView = lazy(() => import('../pages/NotificationView').then(m => ({ default: m.NotificationView })));
+const Login = lazy(() => import('../pages/Login').then(m => ({ default: m.Login })));
 import {
   type Project,
   type Task,
@@ -22,6 +24,7 @@ import {
   deleteTask,
   getMe,
 } from '../api';
+import { useState, useEffect, useCallback } from 'react';
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -228,7 +231,15 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <Login onLoginSuccess={fetchAll} />;
+    return (
+      <Suspense fallback={
+        <div className="flex h-screen w-full bg-[#191919] items-center justify-center">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        </div>
+      }>
+        <Login onLoginSuccess={fetchAll} />
+      </Suspense>
+    );
   }
 
   return (
@@ -244,59 +255,65 @@ export default function App() {
         setSelectedProjectId(null);
       }} />
       <div className="flex-1 h-full overflow-y-auto relative bg-[#191919]">
-        {activeTab === 'home' && (
-          <Home 
-            onSelectProject={(id) => {
-              setSelectedProjectId(id);
-              setActiveTab('projects');
-            }} 
-            onTabChange={setActiveTab} 
-          />
-        )}
-
-        {activeTab === 'projects' && (
-          selectedProject ? (
-            <TaskView
-              project={selectedProject}
-              tasks={projectTasks}
-              onBack={() => setSelectedProjectId(null)}
-              onCreateTask={handleCreateTask}
-              onUpdateTaskStatus={handleUpdateTaskStatus}
-              onUpdateTask={handleUpdateTask}
-              onDeleteTask={handleDeleteTask}
-              onUpdateProject={handleUpdateProject}
-              onDeleteProject={handleDeleteProject}
-              onAddLink={handleAddLink}
-              onRemoveLink={handleRemoveLink}
+        <Suspense fallback={
+          <div className="flex-1 flex items-center justify-center h-full w-full">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }>
+          {activeTab === 'home' && (
+            <Home 
+              onSelectProject={(id) => {
+                setSelectedProjectId(id);
+                setActiveTab('projects');
+              }} 
+              onTabChange={setActiveTab} 
             />
-          ) : (
-            <ProjectList
+          )}
+
+          {activeTab === 'projects' && (
+            selectedProject ? (
+              <TaskView
+                project={selectedProject}
+                tasks={projectTasks}
+                onBack={() => setSelectedProjectId(null)}
+                onCreateTask={handleCreateTask}
+                onUpdateTaskStatus={handleUpdateTaskStatus}
+                onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
+                onUpdateProject={handleUpdateProject}
+                onDeleteProject={handleDeleteProject}
+                onAddLink={handleAddLink}
+                onRemoveLink={handleRemoveLink}
+              />
+            ) : (
+              <ProjectList
+                projects={projects}
+                onSelectProject={setSelectedProjectId}
+                onCreateProject={() => setIsCreateProjectOpen(true)}
+                onDeleteProject={handleDeleteProject}
+                selectedProjectId={selectedProjectId}
+              />
+            )
+          )}
+
+          {activeTab === 'tasks' && (
+            <AllTasksView
               projects={projects}
-              onSelectProject={setSelectedProjectId}
-              onCreateProject={() => setIsCreateProjectOpen(true)}
-              onDeleteProject={handleDeleteProject}
-              selectedProjectId={selectedProjectId}
+              tasks={tasks}
+              onUpdateTask={handleUpdateTask}
+              onCreateTask={handleCreateTask}
+              onDeleteTask={handleDeleteTask}
+              onSelectProject={(id) => {
+                setSelectedProjectId(id);
+                setActiveTab('projects');
+              }}
             />
-          )
-        )}
+          )}
 
-        {activeTab === 'tasks' && (
-          <AllTasksView
-            projects={projects}
-            tasks={tasks}
-            onUpdateTask={handleUpdateTask}
-            onCreateTask={handleCreateTask}
-            onDeleteTask={handleDeleteTask}
-            onSelectProject={(id) => {
-              setSelectedProjectId(id);
-              setActiveTab('projects');
-            }}
-          />
-        )}
-
-        {activeTab === 'notifications' && (
-          <NotificationView />
-        )}
+          {activeTab === 'notifications' && (
+            <NotificationView />
+          )}
+        </Suspense>
 
         {(activeTab === 'account' || activeTab === 'settings') && (
           <div className="flex-1 flex items-center justify-center bg-[#191919] text-gray-500">

@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { Plus, CircleDot, ChevronDown, Target, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, LayoutGrid, Calendar, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, CircleDot, ChevronDown, Target, Filter, ArrowUpDown, Sparkles, Search, SlidersHorizontal, LayoutGrid, Calendar, Trash2, X, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { CustomDatePicker } from '../components/common/CustomDatePicker';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 
 import { type Project } from '../api';
 
@@ -18,7 +20,64 @@ interface ProjectListProps {
 export function ProjectList({ projects, onSelectProject, onCreateProject, onDeleteProject, selectedProjectId }: ProjectListProps) {
   const [activeTab, setActiveTab] = useState<'Active' | 'Timeline' | 'Board' | 'All'>('Board');
 
-  const groupedProjects = projects.reduce((acc, project) => {
+  // Toolbar States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'completion' | 'priority' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+  const [filterPriorities, setFilterPriorities] = useState<string[]>([]);
+  const [showColumns, setShowColumns] = useState({
+    owner: true,
+    dates: true,
+    priority: true,
+    completion: true,
+    blockedBy: true,
+  });
+
+  const processedProjects = useMemo(() => {
+    let result = [...projects];
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        (p.owner && p.owner.toLowerCase().includes(q))
+      );
+    }
+
+    if (filterStatuses.length > 0) {
+      result = result.filter(p => filterStatuses.includes(p.status));
+    }
+    if (filterPriorities.length > 0) {
+      result = result.filter(p => filterPriorities.includes(p.priority));
+    }
+
+    if (sortBy) {
+      result.sort((a, b) => {
+        let valA: any = a[sortBy];
+        let valB: any = b[sortBy];
+        
+        if (sortBy === 'priority') {
+          const pOrder = { 'High': 3, 'Medium': 2, 'Low': 1, '': 0 };
+          valA = pOrder[a.priority as keyof typeof pOrder] || 0;
+          valB = pOrder[b.priority as keyof typeof pOrder] || 0;
+        }
+        if (sortBy === 'name') {
+          valA = valA.toLowerCase();
+          valB = valB.toLowerCase();
+        }
+
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [projects, searchQuery, filterStatuses, filterPriorities, sortBy, sortOrder]);
+
+  const groupedProjects = processedProjects.reduce((acc, project) => {
     if (!acc[project.status]) {
       acc[project.status] = [];
     }
@@ -76,21 +135,31 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, onDele
                   <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
                     <div className="flex items-center gap-1">Status</div>
                   </th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
-                    <div className="flex items-center gap-1">Owner</div>
-                  </th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
-                    <div className="flex items-center gap-1">Dates</div>
-                  </th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
-                    <div className="flex items-center gap-1">Priority</div>
-                  </th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
-                    <div className="flex items-center gap-1">Completion</div>
-                  </th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
-                    <div className="flex items-center gap-1">Blocked By</div>
-                  </th>
+                  {showColumns.owner && (
+                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
+                      <div className="flex items-center gap-1">Owner</div>
+                    </th>
+                  )}
+                  {showColumns.dates && (
+                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
+                      <div className="flex items-center gap-1">Dates</div>
+                    </th>
+                  )}
+                  {showColumns.priority && (
+                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
+                      <div className="flex items-center gap-1">Priority</div>
+                    </th>
+                  )}
+                  {showColumns.completion && (
+                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
+                      <div className="flex items-center gap-1">Completion</div>
+                    </th>
+                  )}
+                  {showColumns.blockedBy && (
+                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-normal">
+                      <div className="flex items-center gap-1">Blocked By</div>
+                    </th>
+                  )}
                   <th className="w-12"></th>
                 </tr>
               </thead>
@@ -112,31 +181,41 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, onDele
                         {project.status}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded bg-gray-700 flex items-center justify-center text-xs">B</div>
-                        <span className="text-sm text-gray-300">{project.owner}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-gray-300">{project.dates}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {project.priority && (
-                        <Badge className={`${getPriorityColor(project.priority)} px-2 py-0.5 text-xs border-none`}>
-                          {project.priority}
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-300 w-12">{project.completion}%</span>
-                        <Progress value={project.completion} className="w-24 h-2 bg-gray-700" />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-gray-400">{project.blockedBy}</span>
-                    </td>
+                    {showColumns.owner && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded bg-gray-700 flex items-center justify-center text-xs">B</div>
+                          <span className="text-sm text-gray-300">{project.owner}</span>
+                        </div>
+                      </td>
+                    )}
+                    {showColumns.dates && (
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-gray-300">{project.dates}</span>
+                      </td>
+                    )}
+                    {showColumns.priority && (
+                      <td className="px-4 py-3">
+                        {project.priority && (
+                          <Badge className={`${getPriorityColor(project.priority)} px-2 py-0.5 text-xs border-none`}>
+                            {project.priority}
+                          </Badge>
+                        )}
+                      </td>
+                    )}
+                    {showColumns.completion && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-300 w-12">{project.completion}%</span>
+                          <Progress value={project.completion} className="w-24 h-2 bg-gray-700" />
+                        </div>
+                      </td>
+                    )}
+                    {showColumns.blockedBy && (
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-gray-400">{project.blockedBy}</span>
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <Button 
@@ -454,26 +533,174 @@ export function ProjectList({ projects, onSelectProject, onCreateProject, onDele
         <div className="flex-1" />
 
         <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-[#2a2a2a] hover:text-white h-8">
-            <Filter className="w-4 h-4 mr-2" />
-            Lọc
-          </Button>
-          <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-[#2a2a2a] hover:text-white h-8">
-            <ArrowUpDown className="w-4 h-4 mr-2" />
-            Sắp xếp
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className={`h-8 ${filterStatuses.length > 0 || filterPriorities.length > 0 ? 'text-blue-400' : 'text-gray-400 hover:text-white'} hover:bg-[#2a2a2a]`}>
+                <Filter className="w-4 h-4 mr-2" />
+                Lọc
+                {(filterStatuses.length > 0 || filterPriorities.length > 0) && (
+                  <span className="ml-1.5 w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 text-[10px] flex items-center justify-center font-bold">
+                    {filterStatuses.length + filterPriorities.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-60 bg-[#1e1e1e] border-[#333] p-3 shadow-2xl rounded-xl">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Trạng thái</h4>
+                  <div className="space-y-1">
+                    {['Planning', 'In Progress', 'Done', 'Backlog'].map(status => (
+                      <label key={status} className="flex items-center gap-2 text-sm text-gray-300 hover:text-white cursor-pointer group py-1 rounded px-2 hover:bg-gray-800">
+                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${filterStatuses.includes(status) ? 'bg-blue-600 border-blue-600' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                          {filterStatuses.includes(status) && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        <input type="checkbox" className="hidden" 
+                          checked={filterStatuses.includes(status)} 
+                          onChange={() => {
+                            setFilterStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status])
+                          }} 
+                        />
+                        {status}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Độ ưu tiên</h4>
+                  <div className="space-y-1">
+                    {['High', 'Medium', 'Low'].map(prio => (
+                      <label key={prio} className="flex items-center gap-2 text-sm text-gray-300 hover:text-white cursor-pointer group py-1 rounded px-2 hover:bg-gray-800">
+                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${filterPriorities.includes(prio) ? 'bg-blue-600 border-blue-600' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                          {filterPriorities.includes(prio) && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        <input type="checkbox" className="hidden" 
+                          checked={filterPriorities.includes(prio)} 
+                          onChange={() => {
+                            setFilterPriorities(prev => prev.includes(prio) ? prev.filter(p => p !== prio) : [...prev, prio])
+                          }} 
+                        />
+                        {prio}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {(filterStatuses.length > 0 || filterPriorities.length > 0) && (
+                  <Button variant="ghost" size="sm" className="w-full text-xs text-red-400 hover:text-red-300 hover:bg-red-400/10 mt-2 h-7" onClick={() => {setFilterStatuses([]); setFilterPriorities([]);}}>
+                    Xóa bộ lọc
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className={`h-8 ${sortBy ? 'text-blue-400' : 'text-gray-400 hover:text-white'} hover:bg-[#2a2a2a]`}>
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                Sắp xếp
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 bg-[#1e1e1e] border-[#333] p-1 shadow-2xl rounded-xl">
+              <div className="p-1.5 border-b border-gray-800 mb-1">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-1">Sắp xếp theo</span>
+              </div>
+              <div className="space-y-0.5">
+                {[
+                  { value: 'name', label: 'Tên dự án' },
+                  { value: 'priority', label: 'Độ ưu tiên' },
+                  { value: 'completion', label: 'Tiến độ' }
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 text-sm rounded hover:bg-[#2a2a2a] transition-colors ${sortBy === option.value ? 'text-blue-400 font-medium bg-blue-500/10' : 'text-gray-300'}`}
+                    onClick={() => {
+                      if (sortBy === option.value) {
+                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy(option.value as any);
+                        setSortOrder('asc');
+                      }
+                    }}
+                  >
+                    {option.label}
+                    {sortBy === option.value && (
+                      <ArrowUpDown className={`w-3.5 h-3.5 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+                ))}
+              </div>
+              {sortBy && (
+                <div className="mt-1 pt-1 border-t border-gray-800">
+                  <button 
+                    className="w-full text-left px-2 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded transition-colors"
+                    onClick={() => setSortBy(null)}
+                  >
+                    Bỏ sắp xếp
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
           <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-[#2a2a2a] hover:text-white h-8">
             <Sparkles className="w-4 h-4 mr-2" />
             AI
           </Button>
-          <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-[#2a2a2a] hover:text-white h-8">
-            <Search className="w-4 h-4 mr-2" />
-            Tìm kiếm
-          </Button>
-          <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-[#2a2a2a] hover:text-white h-8">
-            <SlidersHorizontal className="w-4 h-4 mr-2" />
-            Tùy chỉnh
-          </Button>
+
+          {showSearch ? (
+            <div className="relative flex items-center mx-1 animate-in slide-in-from-right-4 fade-in duration-200">
+              <input
+                autoFocus
+                type="text"
+                placeholder="Tên dự án, người dùng..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-[#1a1a1a] border border-gray-700 text-sm rounded-md pl-8 pr-8 py-1 outline-none focus:border-blue-500 w-56 text-white transition-all h-8"
+              />
+              <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5" />
+              <button 
+                onClick={() => { setShowSearch(false); setSearchQuery(''); }}
+                className="absolute right-2.5 text-gray-500 hover:text-gray-300 bg-[#1a1a1a]"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" className={`h-8 ${searchQuery ? 'text-blue-400' : 'text-gray-400 hover:text-white'} hover:bg-[#2a2a2a]`} onClick={() => setShowSearch(true)}>
+              <Search className="w-4 h-4 mr-2" />
+              Tìm kiếm
+            </Button>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-[#2a2a2a] hover:text-white h-8">
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                Tùy chỉnh
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-[#1e1e1e] border-[#333] shadow-2xl rounded-xl">
+              <div className="p-1.5 border-b border-gray-800 mb-1">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-1">Hiển thị cột</span>
+              </div>
+              <DropdownMenuCheckboxItem checked={showColumns.owner} onCheckedChange={(c) => setShowColumns(prev => ({...prev, owner: c}))} className="text-gray-300 focus:bg-[#2a2a2a] focus:text-white cursor-pointer py-1.5">
+                Người phụ trách
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={showColumns.dates} onCheckedChange={(c) => setShowColumns(prev => ({...prev, dates: c}))} className="text-gray-300 focus:bg-[#2a2a2a] focus:text-white cursor-pointer py-1.5">
+                Ngày (Dates)
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={showColumns.priority} onCheckedChange={(c) => setShowColumns(prev => ({...prev, priority: c}))} className="text-gray-300 focus:bg-[#2a2a2a] focus:text-white cursor-pointer py-1.5">
+                Độ ưu tiên
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={showColumns.completion} onCheckedChange={(c) => setShowColumns(prev => ({...prev, completion: c}))} className="text-gray-300 focus:bg-[#2a2a2a] focus:text-white cursor-pointer py-1.5">
+                Tiến độ
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={showColumns.blockedBy} onCheckedChange={(c) => setShowColumns(prev => ({...prev, blockedBy: c}))} className="text-gray-300 focus:bg-[#2a2a2a] focus:text-white cursor-pointer py-1.5">
+                Bị chặn bởi
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="flex ml-2">
             <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-8 rounded-r-none px-3" onClick={onCreateProject}>
               Mới

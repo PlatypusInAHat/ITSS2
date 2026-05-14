@@ -89,18 +89,33 @@ async function deleteProject(id) {
 
 // ─── Tính lại completion % sau khi task thay đổi ─────────────────────────────
 async function recalculateCompletion(projectId) {
-  const tasks = await prisma.task.findMany({ where: { projectId } });
-  
-  if (tasks.length === 0) {
+  // Sử dụng aggregation để tính toán trực tiếp trên CSDL
+  const result = await prisma.task.groupBy({
+    by: ['status'],
+    where: { projectId },
+    _sum: {
+      weight: true
+    }
+  });
+
+  if (result.length === 0) {
     return prisma.project.update({
       where: { id: projectId },
       data: { completion: 0 },
     });
   }
 
-  const totalWeight = tasks.reduce((sum, task) => sum + (task.weight || 1), 0);
-  const doneWeight = tasks.filter(t => t.status === 'Done').reduce((sum, task) => sum + (task.weight || 1), 0);
-  
+  let totalWeight = 0;
+  let doneWeight = 0;
+
+  result.forEach(group => {
+    const weight = group._sum.weight || 0;
+    totalWeight += weight;
+    if (group.status === 'Done') {
+      doneWeight += weight;
+    }
+  });
+
   const completion = totalWeight === 0 
     ? 0 
     : Math.round((doneWeight / totalWeight) * 10000) / 100;
