@@ -7,108 +7,140 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // Xoá dữ liệu cũ
+  await prisma.notification.deleteMany();
+  await prisma.projectLink.deleteMany();
   await prisma.task.deleteMany();
   await prisma.project.deleteMany();
   await prisma.user.deleteMany();
 
-  // Tạo user mặc định
   const passwordHash = await bcrypt.hash('password123', 10);
-  const user = await prisma.user.create({
-    data: {
-      name: 'Bình',
-      email: 'binh@example.com',
-      password: passwordHash,
-    },
-  });
 
-  // Tạo projects
-  const p1 = await prisma.project.create({
-    data: {
-      name: 'Bài tập cá nhân Nguyên lí Hệ điều hành',
-      description: 'Bài tập cuối kì môn HĐHNH',
-      status: 'Planning',
-      owner: 'Bình',
-      dates: '17 tháng 9, 2025 → 19 tháng 11, 2025',
-      priority: 'High',
-      completion: 0,
-      blockedBy: '',
-      icon: '📝',
-      members: { connect: { id: user.id } },
-    },
-  });
+  // 1. TẠO 10 USERS
+  const usersData = [
+    { name: 'Bình', email: 'binh@example.com' },
+    { name: 'An', email: 'an@example.com' },
+    { name: 'Chí', email: 'chi@example.com' },
+    { name: 'Dũng', email: 'dung@example.com' },
+    { name: 'Giang', email: 'giang@example.com' },
+    { name: 'Hà', email: 'ha@example.com' },
+    { name: 'Khanh', email: 'khanh@example.com' },
+    { name: 'Lan', email: 'lan@example.com' },
+    { name: 'Minh', email: 'minh@example.com' },
+    { name: 'Nga', email: 'nga@example.com' },
+  ];
 
-  const p2 = await prisma.project.create({
-    data: {
-      name: 'Bài tập nhóm Công nghệ Web',
-      description: 'Dự án nhóm môn Web',
-      status: 'In Progress',
-      owner: 'Bình',
-      dates: '17 tháng 9, 2025 → 22 tháng 11, 2025',
-      priority: 'High',
-      completion: 0,
-      blockedBy: '',
-      icon: '🌐',
-      members: { connect: { id: user.id } },
-    },
-  });
+  const createdUsers = [];
+  for (const u of usersData) {
+    const user = await prisma.user.create({
+      data: { name: u.name, email: u.email, password: passwordHash }
+    });
+    createdUsers.push(user);
+  }
+  const mainUser = createdUsers[0]; // Bình
 
-  const p3 = await prisma.project.create({
-    data: {
-      name: 'Đồ án Chuyên ngành',
-      description: 'Đồ án quan trọng sắp đến hạn',
-      status: 'In Progress',
-      owner: 'Bình',
-      dates: '01 tháng 1, 2026 → 15 tháng 5, 2026',
-      priority: 'High',
-      completion: 45,
-      blockedBy: '',
-      icon: '🎓',
-      members: { connect: { id: user.id } },
-    },
-  });
+  // 2. TẠO 10 PROJECTS
+  const projectsData = [
+    { name: 'Bài tập cá nhân Nguyên lí HĐH', status: 'Planning', priority: 'High', dates: '17 tháng 9, 2025 → 19 tháng 11, 2025', icon: '📝' },
+    { name: 'Bài tập nhóm Công nghệ Web', status: 'In Progress', priority: 'High', dates: '17 tháng 9, 2025 → 22 tháng 11, 2025', icon: '🌐' },
+    { name: 'Đồ án Chuyên ngành', status: 'In Progress', priority: 'High', dates: '01 tháng 1, 2026 → 15 tháng 5, 2026', icon: '🎓' },
+    { name: 'Phát triển Ứng dụng Di động', status: 'Planning', priority: 'Medium', dates: '10 tháng 10, 2025 → 30 tháng 12, 2025', icon: '📱' },
+    { name: 'Thiết kế UI/UX', status: 'Done', priority: 'Low', dates: '01 tháng 8, 2025 → 01 tháng 9, 2025', icon: '🎨' },
+    { name: 'Phân tích Dữ liệu Lớn', status: 'Backlog', priority: 'High', dates: '15 tháng 11, 2025 → 20 tháng 12, 2025', icon: '📊' },
+    { name: 'Khóa luận Tốt nghiệp', status: 'Planning', priority: 'High', dates: '01 tháng 2, 2026 → 30 tháng 6, 2026', icon: '📜' },
+    { name: 'Học Máy ứng dụng', status: 'In Progress', priority: 'Medium', dates: '05 tháng 9, 2025 → 05 tháng 11, 2025', icon: '🤖' },
+    { name: 'Nghiên cứu Khoa học', status: 'In Progress', priority: 'High', dates: '01 tháng 7, 2025 → 30 tháng 11, 2025', icon: '🔬' },
+    { name: 'Thực tập Doanh nghiệp', status: 'Done', priority: 'High', dates: '01 tháng 6, 2025 → 31 tháng 8, 2025', icon: '🏢' },
+  ];
 
-  // Tasks cho p1
-  await prisma.task.createMany({
-    data: [
-      { title: 'Đăng kí chủ đề',  status: 'Done',        projectId: p1.id, assignee: 'Bình', due: '17 tháng 9, 2025',  priority: 'Medium', summary: 'Đăng kí chủ đề trong link', icon: 'calendar' },
-      { title: 'Tìm tài liệu',    status: 'In Progress', projectId: p1.id, assignee: 'Bình', due: '21 tháng 9, 2025',  priority: 'High',   icon: 'cloud' },
-      { title: 'Đọc tài liệu',    status: 'Not Started', projectId: p1.id, assignee: 'Bình', due: '15 tháng 10, 2025', priority: 'High',   summary: 'Đọc các tài liệu' },
-      { title: 'Viết báo cáo',    status: 'Not Started', projectId: p1.id },
-      { title: 'Nộp bài',         status: 'Not Started', projectId: p1.id },
-    ],
-  });
+  const createdProjects = [];
+  for (let i = 0; i < projectsData.length; i++) {
+    const pData = projectsData[i];
+    // Chọn ngẫu nhiên 3-5 thành viên cho dự án, luôn có Bình
+    const shuffledUsers = [...createdUsers].sort(() => 0.5 - Math.random());
+    const memberCount = Math.floor(Math.random() * 3) + 3; // 3 to 5
+    const members = [mainUser, ...shuffledUsers.slice(0, memberCount)].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i); // Ensure unique
 
-  // Tasks cho p2
-  await prisma.task.createMany({
-    data: [
-      { title: 'Chọn nhóm',               status: 'In Progress', projectId: p2.id },
-      { title: 'Chọn chủ đề',             status: 'Not Started', projectId: p2.id },
-      { title: 'Phân công công việc',      status: 'Not Started', projectId: p2.id },
-    ],
-  });
+    const project = await prisma.project.create({
+      data: {
+        name: pData.name,
+        description: `Mô tả cho dự án ${pData.name}`,
+        status: pData.status,
+        owner: members[0].name,
+        dates: pData.dates,
+        priority: pData.priority,
+        completion: 0,
+        icon: pData.icon,
+        members: { connect: members.map(m => ({ id: m.id })) }
+      }
+    });
+    createdProjects.push({ ...project, _members: members });
 
-  // Tasks cho p3
-  await prisma.task.createMany({
-    data: [
-      { title: 'Chọn chủ đề', status: 'In Progress', projectId: p3.id },
-      { title: 'Đăng kí',     status: 'Not Started', projectId: p3.id },
-    ],
-  });
-
-  // Tính lại completion
-  for (const p of [p1, p2, p3]) {
-    const tasks = await prisma.task.findMany({ where: { projectId: p.id } });
-    const done = tasks.filter(t => t.status === 'Done').length;
-    const completion = tasks.length > 0
-      ? Math.round((done / tasks.length) * 10000) / 100
-      : p.completion;
-    await prisma.project.update({ where: { id: p.id }, data: { completion } });
+    // Tạo 2 Links mẫu cho mỗi dự án
+    await prisma.projectLink.createMany({
+      data: [
+        { title: 'Tài liệu hướng dẫn', url: 'https://docs.google.com', projectId: project.id },
+        { title: 'Figma Design', url: 'https://figma.com', projectId: project.id }
+      ]
+    });
   }
 
-  const projectCount = await prisma.project.count();
-  const taskCount    = await prisma.task.count();
+  // 3. TẠO TASKS CHO TỪNG PROJECT (mỗi project 5-8 tasks)
+  const taskTemplates = [
+    { title: 'Lên kế hoạch', status: 'Done', icon: '📅', priority: 'High' },
+    { title: 'Thu thập yêu cầu', status: 'Done', icon: '📝', priority: 'High' },
+    { title: 'Thiết kế Database', status: 'In Progress', icon: '🗄️', priority: 'High' },
+    { title: 'Thiết kế API', status: 'In Progress', icon: '🔌', priority: 'Medium' },
+    { title: 'Code Frontend', status: 'Not Started', icon: '💻', priority: 'High' },
+    { title: 'Code Backend', status: 'Not Started', icon: '⚙️', priority: 'High' },
+    { title: 'Kiểm thử (Testing)', status: 'Not Started', icon: '🐛', priority: 'Medium' },
+    { title: 'Triển khai (Deploy)', status: 'Not Started', icon: '🚀', priority: 'Low' },
+    { title: 'Viết báo cáo', status: 'Not Started', icon: '📄', priority: 'Medium' },
+    { title: 'Chuẩn bị slide', status: 'Not Started', icon: '📊', priority: 'Low' },
+  ];
 
-  console.log(`✅ Seed hoàn thành! ${projectCount} projects, ${taskCount} tasks`);
+  for (const p of createdProjects) {
+    const numTasks = Math.floor(Math.random() * 4) + 5; // 5 to 8
+    
+    for (let i = 0; i < numTasks; i++) {
+      const template = taskTemplates[i];
+      // Randomly assign 1-2 members from the project
+      const assignees = [...p._members].sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1);
+
+      // Random status mapping based on project status
+      let taskStatus = template.status;
+      if (p.status === 'Planning' || p.status === 'Backlog') taskStatus = 'Not Started';
+      if (p.status === 'Done') taskStatus = 'Done';
+      
+      await prisma.task.create({
+        data: {
+          title: template.title,
+          status: taskStatus,
+          projectId: p.id,
+          due: '20 tháng 10, 2025',
+          priority: template.priority,
+          icon: template.icon,
+          weight: Math.floor(Math.random() * 3) + 1, // 1 to 3
+          assignee: assignees.map(a => a.name).join(', '),
+          assignees: { connect: assignees.map(a => ({ id: a.id })) }
+        }
+      });
+    }
+
+    // Tính lại completion
+    const tasks = await prisma.task.findMany({ where: { projectId: p.id } });
+    if (tasks.length > 0) {
+      const totalWeight = tasks.reduce((sum, t) => sum + (t.weight || 1), 0);
+      const doneWeight = tasks.filter(t => t.status === 'Done').reduce((sum, t) => sum + (t.weight || 1), 0);
+      const completion = Math.round((doneWeight / totalWeight) * 10000) / 100;
+      await prisma.project.update({ where: { id: p.id }, data: { completion } });
+    }
+  }
+
+  const userCount = await prisma.user.count();
+  const projectCount = await prisma.project.count();
+  const taskCount = await prisma.task.count();
+
+  console.log(`✅ Seed hoàn thành! ${userCount} users, ${projectCount} projects, ${taskCount} tasks`);
 }
 
 main()
