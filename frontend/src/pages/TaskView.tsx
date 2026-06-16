@@ -3,7 +3,7 @@ import {
   Plus, Target, Users, Calendar, ChevronDown, LayoutGrid, List, 
   Sparkles, Search, Maximize2, Trash2, Link as LinkIcon, ExternalLink, 
   Flag, TrendingUp, AlertCircle, X, CheckCircle2, Loader2, UserCircle,
-  ArrowLeft
+  ArrowLeft, Clock
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -70,18 +70,46 @@ const getDifficultyColor = (difficulty: string) => {
   }
 };
 
-const isTaskOverdue = (dueDateStr?: string): boolean => {
+// Updated: Check if task is due today
+const isTaskDueToday = (dueDateStr?: string): boolean => {
   if (!dueDateStr) return false;
+  const dueDate = parseDate(dueDateStr);
+  if (!dueDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  return dueDate.getTime() === today.getTime();
+};
+
+// Updated: Check if task is due tomorrow (1 day away)
+const isTaskDueTomorrow = (dueDateStr?: string): boolean => {
+  if (!dueDateStr) return false;
+  const dueDate = parseDate(dueDateStr);
+  if (!dueDate) return false;
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  return dueDate.getTime() === tomorrow.getTime();
+};
+
+// Helper to parse date string
+const parseDate = (dueDateStr: string): Date | null => {
   const dateMatch = dueDateStr.match(/(\d+)\s+tháng\s+(\d+),\s+(\d+)/);
-  let dueDate;
   if (dateMatch) {
     const day = parseInt(dateMatch[1], 10);
     const month = parseInt(dateMatch[2], 10);
     const year = parseInt(dateMatch[3], 10);
-    dueDate = new Date(year, month - 1, day);
-  } else {
-    dueDate = new Date(dueDateStr);
+    return new Date(year, month - 1, day);
   }
+  return new Date(dueDateStr);
+};
+
+// Updated: Check if task is overdue
+const isTaskOverdue = (dueDateStr?: string): boolean => {
+  if (!dueDateStr) return false;
+  const dueDate = parseDate(dueDateStr);
+  if (!dueDate) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   dueDate.setHours(0, 0, 0, 0);
@@ -458,18 +486,39 @@ export const TaskView = memo(function TaskView({
                     const taskPriority = task.priority || getPriorityFromWeight(task.weight || 4);
                     const taskDifficulty = getDifficultyFromWeight(task.weight || 4);
                     const isOverdue = isTaskOverdue(task.due) && task.status !== 'Done';
+                    const isDueTomorrow = isTaskDueTomorrow(task.due) && task.status !== 'Done';
+                    const isDueToday = isTaskDueToday(task.due) && task.status !== 'Done';
                     const progress = getProgress(task.id, task.status);
+                    
+                    // Determine card styling based on due date
+                    let cardStyles = 'bg-[#1a1a1a] border-gray-800/50 hover:bg-[#252525]';
+                    if (isOverdue) {
+                      cardStyles = 'bg-red-950/30 border-red-500/50 shadow-red-500/20 hover:bg-red-950/40';
+                    } else if (isDueToday) {
+                      cardStyles = 'bg-orange-950/30 border-orange-500/50 shadow-orange-500/20 hover:bg-orange-950/40';
+                    } else if (isDueTomorrow) {
+                      cardStyles = 'bg-yellow-950/20 border-yellow-500/40 shadow-yellow-500/10 hover:bg-yellow-950/30';
+                    }
+                    
                     return (
                       <div key={task.id} className="relative group">
-                        <div className={`rounded-lg p-3 text-sm hover:bg-[#252525] shadow-sm border transition-all duration-200 space-y-2 ${
-                          isOverdue ? 'bg-red-950/30 border-red-500/50 shadow-red-500/20 hover:bg-red-950/40' : 'bg-[#1a1a1a] border-gray-800/50 hover:bg-[#252525]'
-                        }`}>
+                        <div className={`rounded-lg p-3 text-sm hover:bg-[#252525] shadow-sm border transition-all duration-200 space-y-2 ${cardStyles}`}>
                           <div className="flex items-center justify-between gap-2">
-                            <input
-                              value={task.title}
-                              onChange={(e) => onUpdateTask?.(task.id, { title: e.target.value })}
-                              className={`bg-transparent border-none outline-none flex-1 cursor-text font-medium ${isOverdue ? 'text-red-200' : 'text-white'}`}
-                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              {isOverdue && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />}
+                              {isDueToday && !isOverdue && <Clock className="w-4 h-4 text-orange-400 flex-shrink-0" />}
+                              {isDueTomorrow && !isOverdue && !isDueToday && <Clock className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
+                              <input
+                                value={task.title}
+                                onChange={(e) => onUpdateTask?.(task.id, { title: e.target.value })}
+                                className={`bg-transparent border-none outline-none flex-1 cursor-text font-medium ${
+                                  isOverdue ? 'text-red-200' : 
+                                  isDueToday ? 'text-orange-200' : 
+                                  isDueTomorrow ? 'text-yellow-200' : 
+                                  'text-white'
+                                }`}
+                              />
+                            </div>
                             <Button variant="ghost" size="sm" className="text-gray-600 hover:text-red-400 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-all" onClick={() => handleDeleteTask(task.id)}>
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -534,7 +583,12 @@ export const TaskView = memo(function TaskView({
                               </PopoverContent>
                             </Popover>
                             <CustomDatePicker 
-                              trigger={<button className={`flex items-center gap-1.5 text-[11px] transition-colors ${isOverdue ? 'text-red-400 hover:text-red-300' : 'text-gray-500 hover:text-gray-300'}`}>
+                              trigger={<button className={`flex items-center gap-1.5 text-[11px] transition-colors ${
+                                isOverdue ? 'text-red-400 hover:text-red-300' : 
+                                isDueToday ? 'text-orange-400 hover:text-orange-300' : 
+                                isDueTomorrow ? 'text-yellow-400 hover:text-yellow-300' : 
+                                'text-gray-500 hover:text-gray-300'
+                              }`}>
                                 <Calendar className="w-3 h-3" />
                                 {task.due || 'Thêm ngày'}
                               </button>}
@@ -545,18 +599,28 @@ export const TaskView = memo(function TaskView({
                                 }
                               }}
                             />
-                            {isOverdue && (
+                            {(isOverdue || isDueToday) && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setShowRecommendationsForTask(task.id);
                                   setRecommendationsAnchor(e.currentTarget);
                                 }}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500/30 text-red-300 border border-red-500/50 hover:bg-red-500/40 transition-colors"
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold border transition-colors ${
+                                  isOverdue 
+                                    ? 'bg-red-500/30 text-red-300 border-red-500/50 hover:bg-red-500/40' 
+                                    : 'bg-orange-500/30 text-orange-300 border-orange-500/50 hover:bg-orange-500/40'
+                                }`}
                               >
                                 <AlertCircle className="w-3 h-3" />
-                                Quá hạn
+                                {isOverdue ? 'Quá hạn' : 'Hôm nay'}
                               </button>
+                            )}
+                            {isDueTomorrow && !isOverdue && !isDueToday && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                                <Clock className="w-3 h-3" />
+                                Ngày mai
+                              </span>
                             )}
                             <div className="flex-1" />
                             <button onClick={() => handleTaskClick(task.id)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors hover:bg-gray-800 px-2 py-1 rounded">
@@ -657,15 +721,25 @@ export const TaskView = memo(function TaskView({
                   const taskPriority = task.priority || getPriorityFromWeight(task.weight || 4);
                   const taskDifficulty = getDifficultyFromWeight(task.weight || 4);
                   const isOverdue = isTaskOverdue(task.due) && task.status !== 'Done';
+                  const isDueTomorrow = isTaskDueTomorrow(task.due) && task.status !== 'Done';
+                  const isDueToday = isTaskDueToday(task.due) && task.status !== 'Done';
                   const progress = getProgress(task.id, task.status);
+                  
+                  let rowStyles = '';
+                  if (isOverdue) rowStyles = 'bg-red-950/20';
+                  else if (isDueToday) rowStyles = 'bg-orange-950/20';
+                  else if (isDueTomorrow) rowStyles = 'bg-yellow-950/10';
+                  
                   return (
-                    <tr key={task.id} className={`border-b border-gray-800 hover:bg-[#252525] transition-colors ${isOverdue ? 'bg-red-950/20' : ''}`}>
+                    <tr key={task.id} className={`border-b border-gray-800 hover:bg-[#252525] transition-colors ${rowStyles}`}>
                       <td className="px-4 py-3 text-sm text-gray-200">
                         <div className="flex items-center gap-2">
                           {isOverdue && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />}
+                          {isDueToday && !isOverdue && <Clock className="w-4 h-4 text-orange-400 flex-shrink-0" />}
+                          {isDueTomorrow && !isOverdue && !isDueToday && <Clock className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
                           <input value={task.title} onChange={(e) => onUpdateTask?.(task.id, { title: e.target.value })} className="bg-transparent border-none outline-none text-white w-full" />
                         </div>
-                        </td>
+                      </td>
                       <td className="px-4 py-3 text-sm min-w-[180px]">
                         <HorizontalProgressBar 
                           progress={progress}
@@ -673,7 +747,7 @@ export const TaskView = memo(function TaskView({
                           taskId={task.id}
                           disabled={task.status === 'Done'}
                         />
-                        </td>
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -692,7 +766,7 @@ export const TaskView = memo(function TaskView({
                             ))}
                           </PopoverContent>
                         </Popover>
-                        </td>
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -709,7 +783,7 @@ export const TaskView = memo(function TaskView({
                             ))}
                           </PopoverContent>
                         </Popover>
-                        </td>
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -726,11 +800,18 @@ export const TaskView = memo(function TaskView({
                             ))}
                           </PopoverContent>
                         </Popover>
-                        </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">
+                      </td>
+                      <td className="px-4 py-3 text-sm">
                         <div className="flex items-center gap-2">
                           <CustomDatePicker 
-                            trigger={<button className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors">{task.due || 'Thêm ngày'}</button>}
+                            trigger={<button className={`px-2 py-1 rounded -ml-2 transition-colors ${
+                              isOverdue ? 'text-red-400 hover:text-red-300 hover:bg-red-950/20' : 
+                              isDueToday ? 'text-orange-400 hover:text-orange-300 hover:bg-orange-950/20' : 
+                              isDueTomorrow ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/20' : 
+                              'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+                            }`}>
+                              {task.due || 'Thêm ngày'}
+                            </button>}
                             onSelect={(date) => {
                               if (date && onUpdateTask) {
                                 const formattedDate = `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
@@ -751,8 +832,27 @@ export const TaskView = memo(function TaskView({
                               Quá hạn
                             </button>
                           )}
+                          {isDueToday && !isOverdue && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowRecommendationsForTask(task.id);
+                                setRecommendationsAnchor(e.currentTarget);
+                              }}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-orange-500/30 text-orange-300 border border-orange-500/50 hover:bg-orange-500/40 transition-colors"
+                            >
+                              <Clock className="w-3 h-3" />
+                              Hôm nay
+                            </button>
+                          )}
+                          {isDueTomorrow && !isOverdue && !isDueToday && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                              <Clock className="w-3 h-3" />
+                              Ngày mai
+                            </span>
+                          )}
                         </div>
-                        </td>
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex -space-x-2">
                           {task.assignees && task.assignees.length > 0 ? (
@@ -763,7 +863,7 @@ export const TaskView = memo(function TaskView({
                             ))
                           ) : <span className="text-xs text-gray-500">-</span>}
                         </div>
-                        </td>
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex items-center gap-1">
                           <button onClick={() => handleTaskClick(task.id)} className="p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded transition-colors" title="Xem chi tiết">
@@ -773,7 +873,7 @@ export const TaskView = memo(function TaskView({
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        </td>
+                      </td>
                     </tr>
                   );
                 })
