@@ -341,13 +341,7 @@ export const AllTasksView = memo(function AllTasksView({
                   </tr>
                 );
               })}
-              <tr>
-                <td colSpan={8} className="py-2 pl-8 text-gray-500 hover:bg-[#222] cursor-pointer" onClick={() => onCreateTask(projectId, 'Not Started')}>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Plus className="w-4 h-4" /> Nhiệm vụ mới
-                  </div>
-                </td>
-              </tr>
+              {/* REMOVED: The "+ Nhiệm vụ mới" row from table */}
             </tbody>
           </table>
         </div>
@@ -551,13 +545,7 @@ export const AllTasksView = memo(function AllTasksView({
                 </td>
               </tr>
             )}
-            <tr>
-              <td colSpan={7} className="py-2 pl-8 text-gray-500 hover:bg-[#222] cursor-pointer" onClick={() => onCreateTask(projects[0]?.id || '', 'Not Started')}>
-                <div className="flex items-center gap-2 text-sm">
-                  <Plus className="w-4 h-4" /> Nhiệm vụ mới
-                </div>
-              </td>
-            </tr>
+            {/* REMOVED: The "+ Nhiệm vụ mới" row from All Tasks table */}
           </tbody>
         </table>
         {allTasks.length > 0 && (
@@ -610,9 +598,7 @@ export const AllTasksView = memo(function AllTasksView({
                   <div className={`w-2 h-2 rounded-full ${dotColor}`} />
                   {statusLabel}
                 </div>
-                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-300 h-6 w-8 p-0">
-                  <Plus className="w-4 h-4" onClick={() => onCreateTask(projects[0]?.id || '', status)} />
-                </Button>
+                {/* REMOVED: The Plus button from board column headers */}
               </div>
               
               <div className="space-y-3 flex-1 overflow-y-auto pr-1">
@@ -756,12 +742,13 @@ export const AllTasksView = memo(function AllTasksView({
             />
           </div>
           
+          {/* Emphasized main "Thêm nhiệm vụ" button */}
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-sm font-medium"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 text-base font-semibold rounded-lg shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all duration-200"
             onClick={() => onCreateTask(projects[0]?.id || '', 'Not Started')}
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Nhiệm vụ mới
+            <Plus className="w-5 h-5 mr-2" />
+            Thêm nhiệm vụ mới
           </Button>
         </div>
       </div>

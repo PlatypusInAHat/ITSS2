@@ -29,7 +29,6 @@ const DIFFICULTIES = [
 
 export function CreateTaskDialog({ open, onClose, onCreate, project }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('');
-  const [status, setStatus] = useState<'Not Started' | 'In Progress' | 'Done'>('Not Started');
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [priority, setPriority] = useState('Medium');
   const [difficulty, setDifficulty] = useState('Medium');
@@ -50,7 +49,6 @@ export function CreateTaskDialog({ open, onClose, onCreate, project }: CreateTas
   useEffect(() => {
     if (open) {
       setTitle('');
-      setStatus('Not Started');
       setAssigneeIds([]);
       setPriority('Medium');
       setDifficulty('Medium');
@@ -68,7 +66,7 @@ export function CreateTaskDialog({ open, onClose, onCreate, project }: CreateTas
     try {
       await onCreate({
         title: title.trim(),
-        status,
+        status: 'Not Started', // Default to 'Not Started' (Planning)
         assigneeIds,
         priority,
         difficulty,
@@ -119,9 +117,7 @@ export function CreateTaskDialog({ open, onClose, onCreate, project }: CreateTas
               <Target className="w-5 h-5 text-blue-400" />
               <h2 className="text-lg font-semibold text-white">Tạo nhiệm vụ mới</h2>
             </div>
-            <button type="button" onClick={onClose} className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-gray-400" />
-            </button>
+            {/* Removed duplicate X button - only one remains */}
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
@@ -142,40 +138,7 @@ export function CreateTaskDialog({ open, onClose, onCreate, project }: CreateTas
               </div>
 
               <div className="space-y-5 mt-6">
-                {/* Status */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2 text-gray-400 w-28">
-                    <Sparkles className="w-4 h-4" />
-                    <span className="text-sm">Status</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex flex-wrap gap-2">
-                      {(['Not Started', 'In Progress', 'Done'] as const).map(s => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setStatus(s)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            status === s
-                              ? s === 'Done'
-                                ? 'bg-green-500/20 text-green-300 border border-green-500/50'
-                                : s === 'In Progress'
-                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/50'
-                                : 'bg-gray-500/20 text-gray-300 border border-gray-500/50'
-                              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <div className={`w-1.5 h-1.5 rounded-full ${
-                              s === 'Done' ? 'bg-green-400' : s === 'In Progress' ? 'bg-blue-400' : 'bg-gray-400'
-                            }`} />
-                            {s}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                {/* Status removed - defaults to "Not Started" (Planning) */}
 
                 {/* Priority */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
