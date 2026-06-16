@@ -3,7 +3,7 @@ import {
   Plus, Target, Users, Calendar, ChevronDown, LayoutGrid, List, 
   Sparkles, Search, Maximize2, Trash2, Link as LinkIcon, ExternalLink, 
   Flag, TrendingUp, AlertCircle, X, CheckCircle2, Loader2, UserCircle,
-  ArrowLeft, Clock
+  ArrowLeft, Clock, UserPlus, Mail, User
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -70,7 +70,44 @@ const getDifficultyColor = (difficulty: string) => {
   }
 };
 
-// Updated: Check if task is due today
+// Get project status based on tasks
+const getProjectStatus = (tasks: Task[]) => {
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'Done').length;
+  
+  if (totalTasks === 0) {
+    return { 
+      text: 'Chưa có nhiệm vụ', 
+      color: 'bg-gray-400', 
+      bg: 'bg-gray-500/20', 
+      border: 'border-gray-500/50' 
+    };
+  }
+  if (completedTasks === totalTasks) {
+    return { 
+      text: 'Hoàn thành', 
+      color: 'bg-green-400', 
+      bg: 'bg-green-500/20', 
+      border: 'border-green-500/50' 
+    };
+  }
+  if (completedTasks > 0) {
+    return { 
+      text: 'Đang thực hiện', 
+      color: 'bg-blue-400', 
+      bg: 'bg-blue-500/20', 
+      border: 'border-blue-500/50' 
+    };
+  }
+  return { 
+    text: 'Chưa bắt đầu', 
+    color: 'bg-gray-400', 
+    bg: 'bg-gray-500/20', 
+    border: 'border-gray-500/50' 
+  };
+};
+
+// Check if task is due today
 const isTaskDueToday = (dueDateStr?: string): boolean => {
   if (!dueDateStr) return false;
   const dueDate = parseDate(dueDateStr);
@@ -81,7 +118,7 @@ const isTaskDueToday = (dueDateStr?: string): boolean => {
   return dueDate.getTime() === today.getTime();
 };
 
-// Updated: Check if task is due tomorrow (1 day away)
+// Check if task is due tomorrow (1 day away)
 const isTaskDueTomorrow = (dueDateStr?: string): boolean => {
   if (!dueDateStr) return false;
   const dueDate = parseDate(dueDateStr);
@@ -105,7 +142,7 @@ const parseDate = (dueDateStr: string): Date | null => {
   return new Date(dueDateStr);
 };
 
-// Updated: Check if task is overdue
+// Check if task is overdue
 const isTaskOverdue = (dueDateStr?: string): boolean => {
   if (!dueDateStr) return false;
   const dueDate = parseDate(dueDateStr);
@@ -248,6 +285,9 @@ export const TaskView = memo(function TaskView({
 
   // Calculate project completion
   const localCompletion = getProjectCompletion(project.id, tasks);
+  
+  // Get project status based on tasks
+  const projectStatus = getProjectStatus(tasks);
 
   const handleSearchUsers = async (query: string) => {
     setUserSearch(query);
@@ -453,7 +493,6 @@ export const TaskView = memo(function TaskView({
               className="pl-9 pr-3 py-1.5 text-sm rounded-lg bg-gray-800 border border-gray-700 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
           </div>
-          {/* Emphasized main "Thêm nhiệm vụ" button */}
           <button 
             className="px-6 py-2.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all duration-200 flex items-center gap-2"
             onClick={() => onCreateTask(project.id, 'Not Started')}
@@ -690,7 +729,6 @@ export const TaskView = memo(function TaskView({
                       </div>
                     );
                   })}
-                  {/* REMOVED: The "+ Nhiệm vụ mới" button from each status column */}
                 </div>
               </div>
             );
@@ -929,7 +967,7 @@ export const TaskView = memo(function TaskView({
   return (
     <div className="min-h-full bg-[#191919] text-white">
       <div className="px-8 py-6 space-y-6 flex-shrink-0">
-        {/* Return button added here */}
+        {/* Return button */}
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={onBack}
@@ -941,6 +979,7 @@ export const TaskView = memo(function TaskView({
           <div className="flex-1" />
         </div>
 
+        {/* Project Title */}
         <div className="flex flex-col gap-2">
           <Target className="w-8 h-8 text-gray-400 mb-2" />
           <div className="flex items-center justify-between w-full">
@@ -960,6 +999,7 @@ export const TaskView = memo(function TaskView({
             </Button>
           </div>
           
+          {/* Progress Bar */}
           <div className="mt-4 flex items-center gap-4">
             <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
               <div 
@@ -974,115 +1014,24 @@ export const TaskView = memo(function TaskView({
           </div>
         </div>
 
-        <div className="space-y-3 mt-8">
-          <div className="grid grid-cols-[140px_1fr] gap-4 text-sm items-center">
+        {/* Compact project details grid - MOVED TO TOP */}
+        <div className="space-y-1.5 mt-6">
+          <div className="grid grid-cols-[120px_1fr] gap-2 text-sm items-center">
+            {/* Status */}
             <div className="flex items-center gap-2 text-gray-400">
               <Sparkles className="w-4 h-4" />
               <span>Trạng thái</span>
             </div>
             <div>
-              <div className="inline-flex items-center gap-1.5 bg-[#2563EB]/40 border border-[#2563EB]/50 px-3 py-0.5 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-[#60A5FA]" />
+              <div className={`inline-flex items-center gap-1.5 ${projectStatus.bg} border ${projectStatus.border} px-2.5 py-0.5 rounded-full`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${projectStatus.color}`} />
                 <span className="text-xs text-white font-medium">
-                  {project.status === 'In Progress' ? 'Đang thực hiện' : project.status === 'Not Started' ? 'Chưa bắt đầu' : 'Hoàn thành'}
+                  {projectStatus.text}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-gray-400">
-              <Users className="w-4 h-4" />
-              <span>Chủ sở hữu</span>
-            </div>
-            <div className="text-gray-400 flex items-center gap-2">
-              {project.owner || 'Trống'}
-              <div className="w-px h-3 bg-gray-700 mx-1" />
-              <div className="flex -space-x-2">
-                {project.members?.map(m => (
-                  <div key={m.id} title={m.name} className="w-6 h-6 rounded-full bg-blue-600 border border-[#191919] flex items-center justify-center text-[10px] font-bold">
-                    {m.name.charAt(0).toUpperCase()}
-                  </div>
-                ))}
-              </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="p-1 hover:bg-gray-800 rounded transition-colors text-blue-400">
-                    <Users className="w-4 h-4" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 sm:w-96 bg-[#1e1e1e] border-[#333] p-0 shadow-2xl rounded-xl z-50">
-                  <div className="p-3 border-b border-gray-800">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Thành viên dự án</h4>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto p-2">
-                    {project.members && project.members.length > 0 ? (
-                      <div className="space-y-1">
-                        {project.members.map(m => (
-                          <div key={m.id} className="flex items-center justify-between p-2 hover:bg-gray-800 rounded group transition-colors">
-                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                                {m.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-sm font-medium text-gray-200 truncate">{m.name}</span>
-                                <span className="text-xs text-gray-500 truncate">{m.email}</span>
-                              </div>
-                            </div>
-                            <button 
-                              onClick={() => handleRemoveMember(m.id)} 
-                              className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 transition-all flex-shrink-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-6 text-center">
-                        <Users className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">Chưa có thành viên nào</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3 border-t border-gray-800 bg-[#252525]/30">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                      <input 
-                        className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600"
-                        placeholder="Tìm theo email hoặc tên..."
-                        value={userSearch}
-                        onChange={(e) => handleSearchUsers(e.target.value)}
-                      />
-                    </div>
-                    {searchResults.length > 0 && (
-                      <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
-                        {searchResults.map(u => (
-                          <button 
-                            key={u.id} 
-                            onClick={() => handleAddMember(u.id)}
-                            className="w-full flex items-center gap-3 p-2 hover:bg-blue-600 rounded-lg transition-colors text-left"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                              {u.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex flex-col min-w-0 flex-1">
-                              <span className="text-sm font-medium text-gray-200 truncate">{u.name}</span>
-                              <span className="text-xs text-gray-400 truncate">{u.email}</span>
-                            </div>
-                            <Users className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {isSearching && (
-                      <div className="mt-2 flex justify-center py-2">
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-
+            {/* Date */}
             <div className="flex items-center gap-2 text-gray-400">
               <Calendar className="w-4 h-4" />
               <span>Ngày</span>
@@ -1090,7 +1039,7 @@ export const TaskView = memo(function TaskView({
             <div>
               <CustomDatePicker 
                 trigger={
-                  <button className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-2 py-1 rounded -ml-2 transition-colors">
+                  <button className="text-gray-400 hover:text-gray-300 hover:bg-gray-800 px-1.5 py-0.5 rounded -ml-1.5 transition-colors text-sm">
                     {project.dates || 'Trống'}
                   </button>
                 }
@@ -1109,6 +1058,187 @@ export const TaskView = memo(function TaskView({
           </div>
         </div>
 
+        {/* EMPHASIZED MEMBERS SECTION - MOVED TO TOP WITH PROMINENT DESIGN */}
+        <div className="mt-4 p-4 bg-[#1a1a1a] rounded-xl border border-gray-800/60 hover:border-gray-700 transition-all">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Users className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Thành viên</h3>
+                <p className="text-xs text-gray-500">
+                  {project.members?.length || 0} thành viên trong dự án
+                </p>
+              </div>
+            </div>
+            
+            {/* Add Member Button - Prominent */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30">
+                  <UserPlus className="w-4 h-4" />
+                  Thêm thành viên
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 bg-[#1e1e1e] border-[#333] shadow-2xl rounded-xl z-50 p-0">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-800">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-blue-400" />
+                    <h4 className="text-sm font-semibold text-white">Thêm thành viên</h4>
+                  </div>
+                </div>
+
+                <div className="p-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <input 
+                      className="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-500 transition-colors placeholder:text-gray-500 text-gray-200"
+                      placeholder="Tìm theo email hoặc tên..."
+                      value={userSearch}
+                      onChange={(e) => handleSearchUsers(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  {searchResults.length > 0 && (
+                    <div className="mt-3 max-h-48 overflow-y-auto space-y-1">
+                      {searchResults.map(u => (
+                        <button 
+                          key={u.id} 
+                          onClick={() => handleAddMember(u.id)}
+                          className="w-full flex items-center gap-3 p-2 hover:bg-blue-600/20 rounded-lg transition-colors text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-sm font-medium text-gray-200 truncate">{u.name}</span>
+                            <span className="text-xs text-gray-400 truncate flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              {u.email}
+                            </span>
+                          </div>
+                          <button className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                            Thêm
+                          </button>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {isSearching && (
+                    <div className="mt-3 flex justify-center py-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                    </div>
+                  )}
+                  {userSearch.length >= 2 && searchResults.length === 0 && !isSearching && (
+                    <div className="mt-3 text-center py-3 text-xs text-gray-500 border border-gray-800 rounded-lg">
+                      <User className="w-8 h-8 text-gray-600 mx-auto mb-1" />
+                      Không tìm thấy người dùng
+                    </div>
+                  )}
+                  {userSearch.length < 2 && !isSearching && (
+                    <div className="mt-3 text-center py-3 text-xs text-gray-500">
+                      Nhập ít nhất 2 ký tự để tìm kiếm
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Member Avatars */}
+          <div className="mt-3 flex items-center gap-2">
+            {project.members && project.members.length > 0 ? (
+              <>
+                <div className="flex -space-x-2">
+                  {project.members.slice(0, 6).map(m => (
+                    <div 
+                      key={m.id} 
+                      title={m.name} 
+                      className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-[#1a1a1a] flex items-center justify-center text-xs font-bold text-white shadow-lg"
+                    >
+                      {m.name.charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                  {project.members.length > 6 && (
+                    <div className="w-9 h-9 rounded-full bg-gray-700 border-2 border-[#1a1a1a] flex items-center justify-center text-xs font-bold text-gray-300">
+                      +{project.members.length - 6}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 ml-1">
+                  <span className="text-xs text-gray-400">
+                    {project.members.length} thành viên
+                  </span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="p-1 hover:bg-gray-800 rounded transition-colors text-blue-400 ml-1">
+                        <Users className="w-3.5 h-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-[#1e1e1e] border-[#333] shadow-2xl rounded-xl z-50 p-0">
+                      {/* Header */}
+                      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-blue-400" />
+                          <h4 className="text-sm font-semibold text-white">Thành viên dự án</h4>
+                          <Badge className="bg-gray-700 text-gray-300 text-xs">
+                            {project.members?.length || 0}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Members List */}
+                      <div className="max-h-56 overflow-y-auto p-2">
+                        {project.members && project.members.length > 0 ? (
+                          <div className="space-y-1">
+                            {project.members.map(m => (
+                              <div key={m.id} className="flex items-center justify-between p-2 hover:bg-gray-800 rounded-lg group transition-colors">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                                    {m.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="text-sm font-medium text-gray-200 truncate">{m.name}</span>
+                                    <span className="text-xs text-gray-500 truncate flex items-center gap-1">
+                                      <Mail className="w-3 h-3" />
+                                      {m.email}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button 
+                                  onClick={() => handleRemoveMember(m.id)} 
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-all flex-shrink-0"
+                                  title="Xoá thành viên"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center">
+                            <UserCircle className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                            <p className="text-sm text-gray-400">Chưa có thành viên nào</p>
+                            <p className="text-xs text-gray-500 mt-1">Thêm thành viên để cùng làm việc</p>
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3 text-gray-500">
+                <UserCircle className="w-8 h-8" />
+                <span className="text-sm">Chưa có thành viên</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Links Section */}
         <div className="space-y-4 pt-4 border-t border-gray-800">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-200">
