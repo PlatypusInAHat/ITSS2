@@ -2,7 +2,8 @@ import { useState, useEffect, memo, useMemo } from 'react';
 import { 
   Plus, Target, Users, Calendar, ChevronDown, LayoutGrid, List, 
   Sparkles, Search, Maximize2, Trash2, Link as LinkIcon, ExternalLink, 
-  Flag, TrendingUp, AlertCircle, X, CheckCircle2, Loader2, UserCircle
+  Flag, TrendingUp, AlertCircle, X, CheckCircle2, Loader2, UserCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -424,12 +425,13 @@ export const TaskView = memo(function TaskView({
               className="pl-9 pr-3 py-1.5 text-sm rounded-lg bg-gray-800 border border-gray-700 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
           </div>
+          {/* Emphasized main "Thêm nhiệm vụ" button */}
           <button 
-            className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors flex items-center gap-2"
+            className="px-6 py-2.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all duration-200 flex items-center gap-2"
             onClick={() => onCreateTask(project.id, 'Not Started')}
           >
-            <Plus className="w-4 h-4" />
-            Thêm nhiệm vụ
+            <Plus className="w-5 h-5" />
+            Thêm nhiệm vụ mới
           </button>
         </div>
       </div>
@@ -616,7 +618,7 @@ export const TaskView = memo(function TaskView({
                               taskAssignees={task.assignees}
                               taskCreatedAt={task.createdAt}
                               taskUpdatedAt={task.updatedAt}
-                              projectId={project.id}  // ← MAKE SURE THIS IS ADDED
+                              projectId={project.id}
                               onClose={() => setExpandedTaskId(null)}
                             />
                           </div>
@@ -624,12 +626,7 @@ export const TaskView = memo(function TaskView({
                       </div>
                     );
                   })}
-                  <button onClick={() => onCreateTask(project.id, status)} className={`w-full text-left px-3 py-2.5 text-sm rounded-lg flex items-center gap-2 transition-colors border ${
-                    isNotStarted ? 'text-gray-300 border-gray-700 hover:bg-gray-800/50' : isInProgress ? 'text-blue-400 border-blue-900/60 hover:bg-blue-900/20' : 'text-green-400 border-green-900/60 hover:bg-green-900/20'
-                  }`}>
-                    <Plus className="w-4 h-4" />
-                    Nhiệm vụ mới
-                  </button>
+                  {/* REMOVED: The "+ Nhiệm vụ mới" button from each status column */}
                 </div>
               </div>
             );
@@ -832,6 +829,18 @@ export const TaskView = memo(function TaskView({
   return (
     <div className="min-h-full bg-[#191919] text-white">
       <div className="px-8 py-6 space-y-6 flex-shrink-0">
+        {/* Return button added here */}
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            Quay lại
+          </button>
+          <div className="flex-1" />
+        </div>
+
         <div className="flex flex-col gap-2">
           <Target className="w-8 h-8 text-gray-400 mb-2" />
           <div className="flex items-center justify-between w-full">
